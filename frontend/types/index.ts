@@ -38,6 +38,9 @@ export interface AccountBalance {
   account: Account;
   currencies: CurrencyBalance[];
   converted_amount?: number;
+  subtree_currencies?: CurrencyBalance[];
+  converted_subtree_total?: number;
+  converted_subtree_currency?: string;
 }
 
 export interface Budget {

@@ -80,6 +80,7 @@ export function useBalances(query: {
   depth?: number;
   convert_to?: string;
   date_range?: { from: string; to: string };
+  include_subtree?: boolean;
 }) {
   const { data: session } = useSession();
 
