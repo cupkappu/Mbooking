@@ -2,6 +2,7 @@ import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UpdateTenantSettingsDto } from './dto/tenant-settings.dto';
 
 @ApiTags('tenants')
 @Controller('tenants')
@@ -18,8 +19,8 @@ export class TenantsController {
 
   @Put('settings')
   @ApiOperation({ summary: 'Update tenant settings' })
-  async updateSettings(@Request() req, @Body() settings: any) {
+  async updateSettings(@Request() req, @Body() updateSettingsDto: UpdateTenantSettingsDto) {
     const tenant = await this.tenantsService.findByUserId(req.user.userId);
-    return this.tenantsService.update(tenant.id, { settings });
+    return this.tenantsService.update(tenant.id, { settings: updateSettingsDto });
   }
 }

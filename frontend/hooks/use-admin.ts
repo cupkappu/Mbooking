@@ -81,7 +81,7 @@ export function useAdminUsers(options?: { offset?: number; limit?: number }) {
     queryKey: ['admin-users', options],
     queryFn: () =>
       apiClient.get<AdminUsersResponse>(
-        `/api/v1/admin/users?offset=${options?.offset || 0}&limit=${options?.limit || 50}`
+        `/admin/users?offset=${options?.offset || 0}&limit=${options?.limit || 50}`
       ),
   });
 }
@@ -89,49 +89,49 @@ export function useAdminUsers(options?: { offset?: number; limit?: number }) {
 export function useCreateAdminUser() {
   return useMutation({
     mutationFn: (data: { email: string; name: string; password: string; role: string }) =>
-      apiClient.post<AdminUser>('/api/v1/admin/users', data),
+      apiClient.post<AdminUser>('/admin/users', data),
   });
 }
 
 export function useUpdateAdminUser() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<AdminUser> }) =>
-      apiClient.put<AdminUser>(`/api/v1/admin/users/${id}`, data),
+      apiClient.put<AdminUser>(`/admin/users/${id}`, data),
   });
 }
 
 export function useDisableAdminUser() {
   return useMutation({
     mutationFn: (id: string) =>
-      apiClient.delete(`/api/v1/admin/users/${id}`),
+      apiClient.delete(`/admin/users/${id}`),
   });
 }
 
 export function useResetUserPassword() {
   return useMutation({
     mutationFn: ({ id, new_password }: { id: string; new_password: string }) =>
-      apiClient.post(`/api/v1/admin/users/${id}/reset-password`, { new_password }),
+      apiClient.post(`/admin/users/${id}/reset-password`, { new_password }),
   });
 }
 
 export function useBulkUserAction() {
   return useMutation({
     mutationFn: (data: { action: string; user_ids: string[]; parameters?: any }) =>
-      apiClient.post('/api/v1/admin/users/bulk-action', data),
+      apiClient.post('/admin/users/bulk-action', data),
   });
 }
 
 export function useSystemConfig() {
   return useQuery({
     queryKey: ['admin-system-config'],
-    queryFn: () => apiClient.get<SystemConfig>('/api/v1/admin/system/config'),
+    queryFn: () => apiClient.get<SystemConfig>('/admin/system/config'),
   });
 }
 
 export function useUpdateSystemConfig() {
   return useMutation({
     mutationFn: (data: Partial<SystemConfig>) =>
-      apiClient.put<SystemConfig>('/api/v1/admin/system/config', data),
+      apiClient.put<SystemConfig>('/admin/system/config', data),
   });
 }
 
@@ -140,7 +140,7 @@ export function useAdminProviders(options?: { offset?: number; limit?: number })
     queryKey: ['admin-providers', options],
     queryFn: () =>
       apiClient.get<{ providers: Provider[]; total: number }>(
-        `/api/v1/admin/providers?offset=${options?.offset || 0}&limit=${options?.limit || 50}`
+        `/admin/providers?offset=${options?.offset || 0}&limit=${options?.limit || 50}`
       ),
   });
 }
@@ -148,28 +148,28 @@ export function useAdminProviders(options?: { offset?: number; limit?: number })
 export function useCreateProvider() {
   return useMutation({
     mutationFn: (data: { name: string; type: string; config: any }) =>
-      apiClient.post<Provider>('/api/v1/admin/providers', data),
+      apiClient.post<Provider>('/admin/providers', data),
   });
 }
 
 export function useUpdateProvider() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
-      apiClient.put<Provider>(`/api/v1/admin/providers/${id}`, data),
+      apiClient.put<Provider>(`/admin/providers/${id}`, data),
   });
 }
 
 export function useToggleProvider() {
   return useMutation({
     mutationFn: (id: string) =>
-      apiClient.post<Provider>(`/api/v1/admin/providers/${id}/toggle`, {}),
+      apiClient.post<Provider>(`/admin/providers/${id}/toggle`, {}),
   });
 }
 
 export function useTestProvider() {
   return useMutation({
     mutationFn: (id: string) =>
-      apiClient.post<{ success: boolean; message: string }>(`/api/v1/admin/providers/${id}/test`, {}),
+      apiClient.post<{ success: boolean; message: string }>(`/admin/providers/${id}/test`, {}),
   });
 }
 
@@ -194,7 +194,7 @@ export function useAuditLogs(options?: {
       if (options?.date_from) params.append('date_from', options.date_from);
       if (options?.date_to) params.append('date_to', options.date_to);
       
-      return apiClient.get<AuditLogsResponse>(`/api/v1/admin/logs?${params.toString()}`);
+      return apiClient.get<AuditLogsResponse>(`/admin/logs?${params.toString()}`);
     },
   });
 }
@@ -207,7 +207,7 @@ export function useExportAuditLogs() {
       if (options?.action) params.append('action', options.action);
       if (options?.entity_type) params.append('entity_type', options.entity_type);
       
-      return apiClient.get<string>(`/api/v1/admin/logs/export?${params.toString()}`);
+      return apiClient.get<string>(`/admin/logs/export?${params.toString()}`);
     },
   });
 }
@@ -215,7 +215,7 @@ export function useExportAuditLogs() {
 export function useAdminHealth() {
   return useQuery({
     queryKey: ['admin-health'],
-    queryFn: () => apiClient.get<HealthStatus>('/api/v1/admin/health'),
+    queryFn: () => apiClient.get<HealthStatus>('/admin/health'),
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 }
@@ -223,28 +223,28 @@ export function useAdminHealth() {
 export function useSchedulerConfig() {
   return useQuery({
     queryKey: ['admin-scheduler-config'],
-    queryFn: () => apiClient.get<SchedulerConfig>('/api/v1/admin/scheduler/config'),
+    queryFn: () => apiClient.get<SchedulerConfig>('/admin/scheduler/config'),
   });
 }
 
 export function useUpdateSchedulerConfig() {
   return useMutation({
     mutationFn: (data: Partial<SchedulerConfig>) =>
-      apiClient.put<SchedulerConfig>('/api/v1/admin/scheduler/config', data),
+      apiClient.put<SchedulerConfig>('/admin/scheduler/config', data),
   });
 }
 
 export function useTriggerManualFetch() {
   return useMutation({
     mutationFn: (data?: { provider_ids?: string[]; currencies?: string[] }) =>
-      apiClient.post<{ message: string; job_id: string }>('/api/v1/admin/scheduler/fetch', data || {}),
+      apiClient.post<{ message: string; job_id: string }>('/admin/scheduler/fetch', data || {}),
   });
 }
 
 export function useDataExport() {
   return useMutation({
     mutationFn: (data: { scope: string; format: string }) =>
-      apiClient.post<any>('/api/v1/admin/export', data),
+      apiClient.post<any>('/admin/export', data),
   });
 }
 
@@ -262,27 +262,27 @@ export interface Plugin {
 export function useAdminPlugins() {
   return useQuery({
     queryKey: ['admin-plugins'],
-    queryFn: () => apiClient.get<{ plugins: Plugin[] }>('/api/v1/admin/plugins'),
+    queryFn: () => apiClient.get<{ plugins: Plugin[] }>('/admin/plugins'),
   });
 }
 
 export function useUploadPlugin() {
   return useMutation({
     mutationFn: (data: { filename: string; content: string }) =>
-      apiClient.post<{ message: string }>('/api/v1/admin/plugins', data),
+      apiClient.post<{ message: string }>('/admin/plugins', data),
   });
 }
 
 export function useReloadPlugin() {
   return useMutation({
     mutationFn: (id: string) =>
-      apiClient.post<{ message: string }>(`/api/v1/admin/plugins/${id}/reload`, {}),
+      apiClient.post<{ message: string }>(`/admin/plugins/${id}/reload`, {}),
   });
 }
 
 export function useSchedulerHistory() {
   return useQuery({
     queryKey: ['admin-scheduler-history'],
-    queryFn: () => apiClient.get<any[]>('/api/v1/admin/scheduler/history'),
+    queryFn: () => apiClient.get<any[]>('/admin/scheduler/history'),
   });
 }

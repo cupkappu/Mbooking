@@ -24,6 +24,12 @@ export class TenantsService {
   }
 
   async update(id: string, data: Partial<Tenant>): Promise<Tenant> {
+    if (data.settings) {
+      const existingTenant = await this.findById(id);
+      const existingSettings = existingTenant.settings || {};
+      data.settings = { ...existingSettings, ...data.settings };
+    }
+    
     await this.tenantRepository.update(id, data);
     return this.findById(id);
   }

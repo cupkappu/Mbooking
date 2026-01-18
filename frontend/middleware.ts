@@ -6,10 +6,28 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Admin route protection
+    // Admin route protection - require admin role
     if (path.startsWith('/admin')) {
       if (token?.role !== 'admin') {
+        // If not admin, redirect to dashboard (or login if not authenticated)
+        if (!token) {
+          return NextResponse.redirect(new URL('/login?callbackUrl=' + path, req.url));
+        }
         return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
+    }
+
+    // Dashboard route protection - require authentication
+    // Protect all dashboard routes: /dashboard, /accounts, /journal, /reports, /settings
+    if (
+      path.startsWith('/dashboard') ||
+      path.startsWith('/accounts') ||
+      path.startsWith('/journal') ||
+      path.startsWith('/reports') ||
+      path.startsWith('/settings')
+    ) {
+      if (!token) {
+        return NextResponse.redirect(new URL('/login?callbackUrl=' + path, req.url));
       }
     }
   },
@@ -21,5 +39,12 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/dashboard/:path*',
+    '/accounts/:path*',
+    '/journal/:path*',
+    '/reports/:path*',
+    '/settings/:path*',
+  ],
 };

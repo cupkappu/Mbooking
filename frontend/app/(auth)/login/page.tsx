@@ -1,26 +1,65 @@
-'use client';
+  'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+  import { Suspense, useState, useEffect } from 'react';
+  import { signIn, useSession } from 'next-auth/react';
+  import { useRouter, useSearchParams } from 'next/navigation';
+  import { Loader2 } from 'lucide-react';
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const router = useRouter();
+  function LoginForm() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const { data: session, status, update } = useSession();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
+    const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
-    if (result?.ok) {
-      router.push('/dashboard');
-    }
-  };
+    // Redirect if already authenticated
+    useEffect(() => {
+      if (status === 'authenticated') {
+        router.push(callbackUrl);
+      }
+    }, [status, router, callbackUrl]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      setError('');
+
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Invalid email or password');
+        setLoading(false);
+      } else if (result?.ok) {
+        // Force session update to ensure accessToken is synced to client state
+        await update();
+        router.push(callbackUrl);
+      }
+    };
+
+  // Show loading while checking session
+  if (status === 'loading') {
+    return (
+      <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-lg border shadow">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <h1 className="text-2xl font-bold">Loading...</h1>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render login form if authenticated (will redirect)
+  if (status === 'authenticated') {
+    return null;
+  }
 
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-lg border shadow">
@@ -30,6 +69,11 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md">
+            {error}
+          </div>
+        )}
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             Email
@@ -60,9 +104,10 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          disabled={loading}
+          className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
         >
-          Sign In
+          {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
 
@@ -83,4 +128,23 @@ export default function LoginPage() {
       </button>
     </div>
   );
+}
+
+function LoginFormWithSuspense() {
+  return (
+    <Suspense fallback={
+      <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-lg border shadow">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <h1 className="text-2xl font-bold">Loading...</h1>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+export default function LoginPage() {
+  return <LoginFormWithSuspense />;
 }

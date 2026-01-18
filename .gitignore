@@ -47,3 +47,9 @@ test-results/
 
 # sisyphus
 .sisyphus/
+
+# bug documentation
+docs/bug
+
+# playwright test artifacts
+playwright-report/

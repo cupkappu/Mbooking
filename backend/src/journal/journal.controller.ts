@@ -17,7 +17,8 @@ export class JournalController {
     @Query('offset') offset?: number,
     @Query('limit') limit?: number,
   ) {
-    return this.journalService.findAll(req.user.tenantId, { offset, limit });
+    const entries = await this.journalService.findAll(req.user.tenantId, { offset, limit });
+    return { entries };
   }
 
   @Get(':id')

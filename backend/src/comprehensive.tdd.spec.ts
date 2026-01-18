@@ -19,6 +19,8 @@ jest.mock('bcrypt');
 import { AuthService } from './auth/auth.service';
 import { User } from './auth/user.entity';
 import { JwtService } from '@nestjs/jwt';
+import { TenantsService } from './tenants/tenants.service';
+import { Tenant } from './tenants/tenant.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -58,6 +60,13 @@ describe('AuthService', () => {
           useValue: {
             sign: jest.fn(),
             verify: jest.fn(),
+          },
+        },
+        {
+          provide: TenantsService,
+          useValue: {
+            findByUserId: jest.fn(),
+            create: jest.fn(),
           },
         },
       ],
@@ -171,7 +180,7 @@ describe('AccountsService', () => {
   const mockAccount: Account = {
     id: 'uuid-1',
     tenant_id: 'tenant-1',
-    parent_id: null,
+    parent: null,
     children: [],
     name: 'Bank',
     type: AccountType.ASSETS,
@@ -198,6 +207,16 @@ describe('AccountsService', () => {
             save: jest.fn(),
             remove: jest.fn(),
             findDescendants: jest.fn(),
+            createQueryBuilder: jest.fn().mockReturnValue({
+              leftJoinAndSelect: jest.fn().mockReturnThis(),
+              where: jest.fn().mockReturnThis(),
+              andWhere: jest.fn().mockReturnThis(),
+              orderBy: jest.fn().mockReturnThis(),
+              getMany: jest.fn(),
+            }),
+            manager: {
+              save: jest.fn((account) => Promise.resolve(account)),
+            },
           },
         },
       ],
@@ -236,15 +255,29 @@ describe('AccountsService', () => {
 
   describe('create', () => {
     it('should create top-level account', async () => {
-      accountRepository.create.mockReturnValue(mockAccount);
-      accountRepository.save.mockResolvedValue(mockAccount);
+      accountRepository.create.mockImplementation((data: any) => ({
+        ...data,
+        id: 'uuid-1',
+        path: data.name || '',
+        depth: 0,
+        parent: null,
+        children: [],
+        tenant_id: data.tenant_id || 'tenant-1',
+        type: data.type || AccountType.ASSETS,
+        currency: data.currency || 'USD',
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: null,
+      }));
+      (accountRepository.manager as any).save.mockImplementation((account: any) => Promise.resolve(account));
 
       const result = await service.create(
         {
           name: 'Bank',
           type: AccountType.ASSETS,
           currency: 'USD',
-        },
+        } as any,
         'tenant-1',
       );
 
@@ -256,7 +289,7 @@ describe('AccountsService', () => {
       const parentAccount = { ...mockAccount, path: 'assets', depth: 0 };
       const childAccount = {
         ...mockAccount,
-        parent_id: 'uuid-1',
+        parent: parentAccount as Account,
         path: 'assets:bank',
         depth: 1,
       };
@@ -271,7 +304,7 @@ describe('AccountsService', () => {
           type: AccountType.ASSETS,
           currency: 'USD',
           parent_id: 'uuid-1',
-        },
+        } as any,
         'tenant-1',
       );
 
@@ -569,7 +602,7 @@ describe('QueryService', () => {
   const mockAccount: Account = {
     id: 'acc-1',
     tenant_id: 'tenant-1',
-    parent_id: null,
+    parent: null,
     children: [],
     name: 'Bank',
     type: AccountType.ASSETS,

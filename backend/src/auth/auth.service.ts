@@ -1,16 +1,21 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
+import { TenantsService } from '../tenants/tenants.service';
+import { Tenant } from '../tenants/tenant.entity';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = Logger;
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
+    private tenantsService: TenantsService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<User | null> {
@@ -29,6 +34,8 @@ export class AuthService {
   }
 
   async login(user: User) {
+    await this.ensureTenantExists(user);
+
     const payload = {
       sub: user.id,
       email: user.email,
@@ -67,7 +74,11 @@ export class AuthService {
       provider: 'credentials',
     });
 
-    return this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+    
+    await this.ensureTenantExists(savedUser);
+    
+    return savedUser;
   }
 
   async handleOAuthLogin(profile: any, provider: string): Promise<User> {
@@ -97,6 +108,25 @@ export class AuthService {
       }
     }
 
-    return this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+    
+    await this.ensureTenantExists(savedUser);
+    
+    return savedUser;
+  }
+
+  async ensureTenantExists(user: User): Promise<void> {
+    try {
+      await this.tenantsService.findByUserId(user.id);
+    } catch (error) {
+      const tenant = await this.tenantsService.create({
+        user_id: user.id,
+        name: user.name || `${user.email} Tenant`,
+        settings: { default_currency: 'USD', timezone: 'UTC' },
+        is_active: true,
+      });
+      
+      this.logger.log(`Created tenant ${tenant.id} for user ${user.id}`);
+    }
   }
 }

@@ -39,7 +39,7 @@ export default function CashFlowPage() {
     setLoading(true);
     try {
       const data = await apiClient.get<CashFlowStatement>(
-        `/api/v1/reports/cash-flow?from_date=${dateRange.from}&to_date=${dateRange.to}`
+        `/reports/cash-flow?from_date=${dateRange.from}&to_date=${dateRange.to}`
       );
       setCashFlow(data);
     } catch (error) {

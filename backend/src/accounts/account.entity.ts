@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, ManyToOne, OneToMany, Tree, TreeChildren, TreeParent } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, Tree, TreeChildren, TreeParent } from 'typeorm';
 
 export enum AccountType {
   ASSETS = 'assets',
@@ -17,19 +17,16 @@ export class Account {
   @Column()
   tenant_id: string;
 
-  @TreeParent()
-  parent_id: string | null;
+  @TreeParent({ onDelete: 'NO ACTION' })
+  parent: Account | null;
 
-  @TreeChildren()
+  @TreeChildren({ cascade: true })
   children: Account[];
 
   @Column()
   name: string;
 
-  @Column({
-    type: 'enum',
-    enum: AccountType,
-  })
+  @Column({ type: 'enum', enum: AccountType })
   type: AccountType;
 
   @Column({ length: 10 })

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { QueryProvider } from '@/providers/query-provider';
 import { SessionProvider } from '@/providers/session-provider';
+import { SessionSync } from '@/components/session-sync';
 import { UserMenu } from '@/components/layout/user-menu';
 
 const navigation = [
@@ -25,6 +26,7 @@ export default function DashboardLayout({
   return (
     <SessionProvider>
       <QueryProvider>
+        <SessionSync />
         <div className="min-h-screen flex">
           <aside className="w-64 border-r bg-card">
             <div className="p-6">

@@ -21,7 +21,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
+import { useToast } from '@/hooks/use-toast';
 import { currenciesApi } from '@/lib/currencies';
+import { tenantsApi } from '@/lib/tenants';
 import type { Currency } from '@/types/currency';
 
 export default function SettingsPage() {
@@ -40,6 +44,48 @@ export default function SettingsPage() {
     is_active: true,
     is_default: false,
   });
+  const [defaultCurrency, setDefaultCurrency] = useState<string>('');
+  const [timezone, setTimezone] = useState<string>('UTC');
+  const { data: session } = useSession();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch current tenant settings
+  const { data: tenant, isLoading: isTenantLoading } = useQuery({
+    queryKey: ['tenant', 'current'],
+    queryFn: () => tenantsApi.getCurrent(),
+    enabled: !!session,
+  });
+
+  // Set default values when tenant data loads
+  useEffect(() => {
+    if (tenant?.settings?.default_currency) {
+      setDefaultCurrency(tenant.settings.default_currency);
+    }
+    if (tenant?.settings?.timezone) {
+      setTimezone(tenant.settings.timezone);
+    }
+  }, [tenant]);
+
+  // Mutation for updating tenant settings
+  const updateSettingsMutation = useMutation({
+    mutationFn: (settings: { default_currency?: string; timezone?: string }) => 
+      tenantsApi.updateSettings(settings),
+    onSuccess: (updatedTenant) => {
+      queryClient.setQueryData(['tenant', 'current'], updatedTenant);
+      toast({
+        title: 'Settings saved successfully',
+        variant: 'success',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error saving settings',
+        description: error.message || 'An error occurred while saving settings',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const fetchCurrencies = async () => {
     try {
@@ -54,10 +100,10 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    if (activeTab === 'currencies' && currencies.length === 0) {
+    if ((activeTab === 'currencies' || activeTab === 'general') && currencies.length === 0) {
       fetchCurrencies();
     }
-  }, [activeTab]);
+  }, [activeTab, currencies.length]);
 
   const handleAddCurrency = async () => {
     if (!newCurrency.code || !newCurrency.name || !newCurrency.symbol) return;
@@ -145,48 +191,58 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {activeTab === 'general' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>Configure your general account preferences</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="default-currency">Default Currency</Label>
-              <Select defaultValue="USD">
-                <SelectTrigger id="default-currency">
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currencies.map((currency) => (
-                    <SelectItem key={currency.id} value={currency.code}>
-                      {currency.code} - {currency.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+       {activeTab === 'general' && (
+         <Card>
+           <CardHeader>
+             <CardTitle>General Settings</CardTitle>
+             <CardDescription>Configure your general account preferences</CardDescription>
+           </CardHeader>
+           <CardContent className="space-y-4">
+             <div className="space-y-2">
+               <Label htmlFor="default-currency">Default Currency</Label>
+               <Select value={defaultCurrency} onValueChange={setDefaultCurrency}>
+                 <SelectTrigger id="default-currency">
+                   <SelectValue placeholder="Select currency" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   {currencies.map((currency) => (
+                     <SelectItem key={currency.id} value={currency.code}>
+                       {currency.code} - {currency.name}
+                     </SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
-              <Select defaultValue="UTC">
-                <SelectTrigger id="timezone">
-                  <SelectValue placeholder="Select timezone" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="UTC">UTC</SelectItem>
-                  <SelectItem value="Asia/Hong_Kong">Asia/Hong_Kong</SelectItem>
-                  <SelectItem value="Asia/Shanghai">Asia/Shanghai</SelectItem>
-                  <SelectItem value="America/New_York">America/New_York</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+             <div className="space-y-2">
+               <Label htmlFor="timezone">Timezone</Label>
+               <Select value={timezone} onValueChange={setTimezone}>
+                 <SelectTrigger id="timezone">
+                   <SelectValue placeholder="Select timezone" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="UTC">UTC</SelectItem>
+                   <SelectItem value="Asia/Hong_Kong">Asia/Hong_Kong</SelectItem>
+                   <SelectItem value="Asia/Shanghai">Asia/Shanghai</SelectItem>
+                   <SelectItem value="America/New_York">America/New_York</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
 
-            <Button>Save Settings</Button>
-          </CardContent>
-        </Card>
-      )}
+             <Button 
+               onClick={() => {
+                 updateSettingsMutation.mutate({
+                   default_currency: defaultCurrency,
+                   timezone: timezone,
+                 });
+               }}
+               disabled={updateSettingsMutation.isPending}
+             >
+               {updateSettingsMutation.isPending ? 'Saving...' : 'Save Settings'}
+             </Button>
+           </CardContent>
+         </Card>
+       )}
 
       {activeTab === 'currencies' && (
         <div className="space-y-4">

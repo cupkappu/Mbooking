@@ -3,30 +3,30 @@ import type { RateProvider, CreateProviderRequest, UpdateProviderRequest } from 
 
 export const providersApi = {
   async getAll(): Promise<RateProvider[]> {
-    return apiClient.get<RateProvider[]>('/api/v1/providers');
+    return apiClient.get<RateProvider[]>('/providers');
   },
 
   async getById(id: string): Promise<RateProvider> {
-    return apiClient.get<RateProvider>(`/api/v1/providers/${id}`);
+    return apiClient.get<RateProvider>(`/providers/${id}`);
   },
 
   async create(data: CreateProviderRequest): Promise<RateProvider> {
-    return apiClient.post<RateProvider>('/api/v1/providers', data);
+    return apiClient.post<RateProvider>('/providers', data);
   },
 
   async update(id: string, data: UpdateProviderRequest): Promise<RateProvider> {
-    return apiClient.put<RateProvider>(`/api/v1/providers/${id}`, data);
+    return apiClient.put<RateProvider>(`/providers/${id}`, data);
   },
 
   async delete(id: string): Promise<void> {
-    return apiClient.delete<void>(`/api/v1/providers/${id}`);
+    return apiClient.delete<void>(`/providers/${id}`);
   },
 
   async setDefault(id: string): Promise<RateProvider> {
-    return apiClient.post<RateProvider>(`/api/v1/providers/${id}/set-default`, {});
+    return apiClient.post<RateProvider>(`/providers/${id}/set-default`, {});
   },
 
   async testConnection(id: string): Promise<{ success: boolean; message: string }> {
-    return apiClient.post<{ success: boolean; message: string }>(`/api/v1/providers/${id}/test`, {});
+    return apiClient.post<{ success: boolean; message: string }>(`/providers/${id}/test`, {});
   },
 };

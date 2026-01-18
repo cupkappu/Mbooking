@@ -24,7 +24,7 @@ import { ProviderType } from '../rates/provider.entity';
 
 type RequestWithIp = Request & { ip?: string; headers?: { [key: string]: string } };
 
-@Controller('api/v1/admin')
+@Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 export class AdminController {

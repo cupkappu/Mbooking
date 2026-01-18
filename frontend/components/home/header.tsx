@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,13 +11,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Loader2 } from 'lucide-react';
 
 export interface HeaderProps {
   isAuthenticated: boolean;
   userName?: string | null;
 }
 
-export function Header({ isAuthenticated, userName }: HeaderProps) {
+export function Header({ isAuthenticated: initialAuth, userName: initialName }: HeaderProps) {
+  const { data: session } = useSession();
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
+  const [userName, setUserName] = useState(initialName);
+
+  useEffect(() => {
+    setIsAuthenticated(!!session);
+    setUserName(session?.user?.name || null);
+  }, [session]);
+
+  const initials = userName
+    ? userName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+    : '?';
+
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -43,7 +62,12 @@ export function Header({ isAuthenticated, userName }: HeaderProps) {
 
         {/* Auth Actions */}
         {isAuthenticated ? (
-          <UserMenu userName={userName} />
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <Button variant="default">Console</Button>
+            </Link>
+            <UserMenu userName={userName} />
+          </div>
         ) : (
           <Link href="/login">
             <Button variant="default">Sign In</Button>
@@ -75,6 +99,9 @@ function UserMenu({ userName }: { userName?: string | null }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onClick={() => window.location.href = '/dashboard'}>
+          Dashboard
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/' })}>
           Sign Out
         </DropdownMenuItem>

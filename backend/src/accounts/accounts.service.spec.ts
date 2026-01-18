@@ -12,7 +12,7 @@ describe('AccountsService', () => {
   const mockAccount: Account = {
     id: 'uuid-1',
     tenant_id: 'tenant-1',
-    parent_id: null,
+    parent: null,
     children: [],
     name: 'Bank',
     type: AccountType.ASSETS,
@@ -39,6 +39,16 @@ describe('AccountsService', () => {
             save: jest.fn(),
             remove: jest.fn(),
             findDescendants: jest.fn(() => Promise.resolve([])),
+            createQueryBuilder: jest.fn().mockReturnValue({
+              leftJoinAndSelect: jest.fn().mockReturnThis(),
+              where: jest.fn().mockReturnThis(),
+              andWhere: jest.fn().mockReturnThis(),
+              orderBy: jest.fn().mockReturnThis(),
+              getMany: jest.fn(),
+            }),
+            manager: {
+              save: jest.fn((account) => Promise.resolve(account)),
+            },
           },
         },
       ],
@@ -116,7 +126,7 @@ describe('AccountsService', () => {
       const parentAccount = { ...mockAccount, path: 'assets', depth: 0 };
       const childAccount = {
         ...mockAccount,
-        parent_id: 'uuid-1',
+        parent: parentAccount as Account,
         path: 'assets:bank',
         depth: 1,
       };
@@ -131,7 +141,7 @@ describe('AccountsService', () => {
           type: AccountType.ASSETS,
           currency: 'USD',
           parent_id: 'uuid-1',
-        },
+        } as any,
         'tenant-1',
       );
 
@@ -160,7 +170,7 @@ describe('AccountsService', () => {
   describe('delete', () => {
     it('should throw BadRequestException when account has children', async () => {
       const accountWithChildren = { ...mockAccount, children: [{} as Account] };
-      const childAccount = { ...mockAccount, id: 'uuid-2', parent_id: 'uuid-1' };
+      const childAccount = { ...mockAccount, id: 'uuid-2', parent: mockAccount as Account };
       accountRepository.findOne.mockResolvedValue(accountWithChildren);
       (accountRepository.findDescendants as jest.Mock).mockResolvedValue([mockAccount, childAccount]);
 

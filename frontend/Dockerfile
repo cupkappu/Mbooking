@@ -7,6 +7,10 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+# Set build-time environment variables
+ENV NEXT_PUBLIC_API_URL=http://backend:3001
+
 RUN npm run build
 
 # Production stage
@@ -16,6 +20,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Set runtime environment variables
+ENV NEXT_PUBLIC_API_URL=http://backend:3001
+ENV NEXTAUTH_SECRET=dev-secret-change-in-production
+ENV NEXTAUTH_URL=http://localhost:8068
 
 # Create non-root user with unique UID (avoid conflicts)
 # Use high UID to avoid conflicts with host users

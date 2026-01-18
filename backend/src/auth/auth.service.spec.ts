@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { User } from './user.entity';
+import { TenantsService } from '../tenants/tenants.service';
+import { Tenant } from '../tenants/tenant.entity';
 
 jest.mock('bcrypt');
 
@@ -12,6 +14,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let userRepository: jest.Mocked<Repository<User>>;
   let jwtService: jest.Mocked<JwtService>;
+  let tenantsService: jest.Mocked<TenantsService>;
 
   const mockUser: User = {
     id: 'uuid-1',
@@ -27,6 +30,16 @@ describe('AuthService', () => {
     created_at: new Date(),
     updated_at: new Date(),
     role: 'user',
+  };
+
+  const mockTenant: Tenant = {
+    id: 'tenant-1',
+    user_id: 'uuid-1',
+    name: 'Test User Tenant',
+    settings: { default_currency: 'USD', timezone: 'UTC' },
+    is_active: true,
+    created_at: new Date(),
+    updated_at: new Date(),
   };
 
   beforeEach(async () => {
@@ -48,12 +61,20 @@ describe('AuthService', () => {
             verify: jest.fn(),
           },
         },
+        {
+          provide: TenantsService,
+          useValue: {
+            findByUserId: jest.fn(),
+            create: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     userRepository = module.get(getRepositoryToken(User));
     jwtService = module.get(JwtService);
+    tenantsService = module.get(TenantsService);
   });
 
   describe('validateUser', () => {
@@ -172,6 +193,31 @@ describe('AuthService', () => {
 
       expect(result).toBeDefined();
       expect(userRepository.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('ensureTenantExists', () => {
+    it('should create a tenant for a user if it does not exist', async () => {
+      (tenantsService.findByUserId as jest.Mock).mockRejectedValue(new Error('Tenant not found'));
+      (tenantsService.create as jest.Mock).mockResolvedValue(mockTenant);
+      const userWithoutTenant = { ...mockUser, tenant_id: null };
+      
+      await expect((service as any).ensureTenantExists(userWithoutTenant)).resolves.not.toThrow();
+      
+      expect(tenantsService.create).toHaveBeenCalledWith({
+        user_id: userWithoutTenant.id,
+        name: userWithoutTenant.name || `${userWithoutTenant.email} Tenant`,
+        settings: { default_currency: 'USD', timezone: 'UTC' },
+        is_active: true,
+      });
+    });
+
+    it('should not create a tenant if it already exists', async () => {
+      (tenantsService.findByUserId as jest.Mock).mockResolvedValue(mockTenant);
+      
+      await expect((service as any).ensureTenantExists(mockUser)).resolves.not.toThrow();
+      
+      expect(tenantsService.create).not.toHaveBeenCalled();
     });
   });
 });

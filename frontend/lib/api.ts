@@ -1,33 +1,68 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// API请求通过 Next.js 代理到后端
+// 所有请求自动添加 /api/v1 前缀，与后端路由匹配
+
+import { getSession } from 'next-auth/react';
+
+interface ApiClientOptions {
+  addAuthHeader?: boolean;
+}
 
 class ApiClient {
-  private getHeaders(): HeadersInit {
+  private getHeaders(options?: ApiClientOptions): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
     
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
-    
     return headers;
   }
 
+  private async getAuthHeader(): Promise<string | undefined> {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        return `Bearer ${token}`;
+      }
+
+      const session = await getSession();
+      if (session?.accessToken) {
+        return `Bearer ${session.accessToken}`;
+      }
+    } catch (error) {
+      // Silently handle errors
+    }
+    
+    return undefined;
+  }
+
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // 自动添加 /api/v1 前缀
+    const path = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    const url = `/api/v1/${path}`;
+    
+    // 获取认证头
+    const authHeader = await this.getAuthHeader();
+    
+    const headers: HeadersInit = {
+      ...this.getHeaders(),
+      ...options.headers,
+    };
+    
+    if (authHeader) {
+      (headers as Record<string, string>)['Authorization'] = authHeader;
+    }
+    
+    const response = await fetch(url, {
       ...options,
-      headers: {
-        ...this.getHeaders(),
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Request failed');
+      const error = await response.json().catch(() => ({ message: 'Request failed' }));
+      throw new Error(error.message || 'Request failed');
     }
 
     const data = await response.json();

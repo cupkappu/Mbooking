@@ -13,8 +13,8 @@ export class Tenant {
 
   @Column({ type: 'jsonb', nullable: true })
   settings: {
-    default_currency: string;
-    timezone: string;
+    default_currency?: string;
+    timezone?: string;
     [key: string]: any;
   };
 

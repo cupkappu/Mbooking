@@ -18,8 +18,30 @@ export class AccountsService {
   }
 
   async findTree(tenantId: string): Promise<Account[]> {
-    const trees = await this.accountRepository.findTrees();
-    return trees.filter(a => a.tenant_id === tenantId && a.is_active);
+    // Use QueryBuilder to load parent relation with tenant filter
+    const accounts = await this.accountRepository
+      .createQueryBuilder('account')
+      .leftJoinAndSelect('account.parent', 'parent')
+      .where('account.tenant_id = :tenantId', { tenantId })
+      .andWhere('account.is_active = true')
+      .orderBy('account.path', 'ASC')
+      .getMany();
+    
+    // Convert to plain objects with parent_id
+    return accounts.map(account => ({
+      id: account.id,
+      tenant_id: account.tenant_id,
+      parent_id: account.parent?.id || null,
+      name: account.name,
+      type: account.type,
+      currency: account.currency,
+      path: account.path,
+      depth: account.depth,
+      is_active: account.is_active,
+      created_at: account.created_at,
+      updated_at: account.updated_at,
+      deleted_at: account.deleted_at,
+    })) as unknown as Account[];
   }
 
   async findById(id: string, tenantId: string): Promise<Account> {
@@ -33,29 +55,44 @@ export class AccountsService {
   }
 
   async create(data: Partial<Account>, tenantId: string): Promise<Account> {
+    // Handle empty string parent_id as null
+    const parentId = (data as any).parent_id === '' ? null : (data as any).parent_id;
+
+    let path = data.name || '';
+    let depth = 0;
+    let parent: Account | null = null;
+
+    if (parentId) {
+      parent = await this.findById(parentId, tenantId);
+      path = `${parent.path}:${data.name}`;
+      depth = parent.depth + 1;
+    }
+
+    // Create account
     const account = this.accountRepository.create({
       ...data,
       tenant_id: tenantId,
+      path,
+      depth,
     });
 
-    if (data.parent_id) {
-      const parent = await this.findById(data.parent_id, tenantId);
-      account.path = `${parent.path}:${data.name}`;
-      account.depth = parent.depth + 1;
-    } else {
-      account.path = data.name;
-      account.depth = 0;
+    // Set parent relation if exists
+    if (parent) {
+      (account as any).parent = parent;
     }
 
-    return this.accountRepository.save(account);
+    // Use manager to ensure parent relation is properly saved
+    const saved = await this.accountRepository.manager.save(account);
+    return saved as Account;
   }
 
   async update(id: string, data: Partial<Account>, tenantId: string): Promise<Account> {
     const account = await this.findById(id, tenantId);
     
     if (data.name && data.name !== account.name) {
-      if (account.parent_id) {
-        const parent = await this.findById(account.parent_id, tenantId);
+      const parentId = (account as any).parentIdId;
+      if (parentId) {
+        const parent = await this.findById(parentId, tenantId);
         data.path = `${parent.path}:${data.name}`;
       } else {
         data.path = data.name;
@@ -104,11 +141,11 @@ export class AccountsService {
     if (newParent) {
       account.path = `${newParent.path}:${account.name}`;
       account.depth = newParent.depth + 1;
-      account.parent_id = newParentId;
+      account.parent = newParent;
     } else {
       account.path = account.name;
       account.depth = 0;
-      account.parent_id = null as any;
+      account.parent = null as any;
     }
 
     await this.accountRepository.save(account);

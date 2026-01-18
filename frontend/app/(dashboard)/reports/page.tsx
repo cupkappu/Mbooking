@@ -21,7 +21,7 @@ export default function ReportsPage() {
   const fetchBalanceSheet = async () => {
     setLoading(true);
     try {
-      const data = await apiClient.get(`/api/v1/reports/balance-sheet?as_of_date=${dateRange.to}`);
+      const data = await apiClient.get(`/reports/balance-sheet?as_of_date=${dateRange.to}`);
       setBalanceSheet(data);
     } catch (error) {
       console.error('Failed to fetch balance sheet:', error);
@@ -33,7 +33,7 @@ export default function ReportsPage() {
     setLoading(true);
     try {
       const data = await apiClient.get(
-        `/api/v1/reports/income-statement?from_date=${dateRange.from}&to_date=${dateRange.to}`
+        `/reports/income-statement?from_date=${dateRange.from}&to_date=${dateRange.to}`
       );
       setIncomeStatement(data);
     } catch (error) {

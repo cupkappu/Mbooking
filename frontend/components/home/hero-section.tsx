@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { useSession } from 'next-auth/react';
 
 export interface HeroProps {
   isAuthenticated: boolean;

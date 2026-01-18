@@ -17,7 +17,7 @@ describe('QueryService', () => {
   const mockAccount: Account = {
     id: 'acc-1',
     tenant_id: 'tenant-1',
-    parent_id: null,
+    parent: null,
     children: [],
     name: 'Bank',
     type: AccountType.ASSETS,
@@ -70,72 +70,276 @@ describe('QueryService', () => {
     rateEngine = module.get(RateEngine);
   });
 
-  describe('getBalances', () => {
-    it('should return balances with default depth', async () => {
-      accountRepository.find.mockResolvedValue([mockAccount]);
+   describe('getBalances', () => {
+     it('should return balances with default depth', async () => {
+       accountRepository.find.mockResolvedValue([mockAccount]);
+       
+       const mockQueryBuilder = {
+         select: jest.fn().mockReturnThis(),
+         where: jest.fn().mockReturnThis(),
+         innerJoin: jest.fn().mockReturnThis(),
+         andWhere: jest.fn().mockReturnThis(),
+         groupBy: jest.fn().mockReturnThis(),
+         getRawMany: jest.fn().mockResolvedValue([]),
+       };
+       journalLineRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+
+       const result = await service.getBalances('tenant-1', {});
+
+       expect(result.balances).toBeDefined();
+       expect(result.pagination).toBeDefined();
+       expect(result.meta.cache_hit).toBe(false);
+     });
+
+     it('should use cache when available', async () => {
+       const cachedResult = {
+         balances: [],
+         pagination: { offset: 0, limit: 50, total: 0, has_more: false },
+         meta: { cache_hit: false, calculated_at: new Date().toISOString() },
+       };
+
+       jest.spyOn(service as any, 'getFromCache').mockReturnValue(cachedResult);
+
+       accountRepository.find.mockResolvedValue([]);
+
+       const result = await service.getBalances('tenant-1', { use_cache: true });
+
+       expect(result.meta.cache_hit).toBe(true);
+     });
+
+     it('should convert currencies when specified', async () => {
+       accountRepository.find.mockResolvedValue([mockAccount]);
+
+       const mockQueryBuilder = {
+         select: jest.fn().mockReturnThis(),
+         where: jest.fn().mockReturnThis(),
+         innerJoin: jest.fn().mockReturnThis(),
+         andWhere: jest.fn().mockReturnThis(),
+         groupBy: jest.fn().mockReturnThis(),
+         getRawMany: jest.fn().mockResolvedValue([
+           { line_currency: 'USD', total: '1000' },
+         ]),
+       };
+       journalLineRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+
+       rateEngine.getRate.mockResolvedValue({
+         from: 'USD',
+         to: 'EUR',
+         rate: 0.85,
+         timestamp: new Date(),
+         source: 'test',
+       });
+
+       const result = await service.getBalances('tenant-1', {
+         convert_to: 'EUR',
+         exchange_rate_date: 'latest',
+       });
+
+       expect(rateEngine.getRate).toHaveBeenCalled();
+     });
+
+     it('should include subtree balances when include_subtree is true', async () => {
+       const accountWithChildren = { ...mockAccount, id: 'parent-1', path: 'assets:checking' };
+       accountRepository.find.mockResolvedValue([accountWithChildren]);
+       accountRepository.findOne.mockResolvedValue(accountWithChildren);
+       accountRepository.createQueryBuilder.mockReturnValue({
+         where: jest.fn().mockReturnThis(),
+         getMany: jest.fn().mockResolvedValue([
+           { ...mockAccount, id: 'child-1', path: 'assets:checking:savings' },
+         ]),
+       } as any);
+
+       const mockQueryBuilder = {
+         select: jest.fn().mockReturnThis(),
+         where: jest.fn().mockReturnThis(),
+         innerJoin: jest.fn().mockReturnThis(),
+         andWhere: jest.fn().mockReturnThis(),
+         groupBy: jest.fn().mockReturnThis(),
+         getRawMany: jest.fn().mockResolvedValue([
+           { line_currency: 'USD', total: '100.00' },
+         ]),
+       };
+       journalLineRepository.createQueryBuilder.mockImplementation(() => mockQueryBuilder as any);
+
+       const result = await service.getBalances('tenant-1', {
+         include_subtree: true,
+       });
+
+       expect(result.balances).toBeDefined();
+       expect(result.balances[0]).toHaveProperty('subtree_currencies');
+       expect(Array.isArray(result.balances[0].subtree_currencies)).toBe(true);
+     });
+
+     it('should calculate subtree balances for specific accounts when subtree_account_ids provided', async () => {
+       const accountWithChildren = { ...mockAccount, id: 'parent-1', path: 'assets:checking' };
+       accountRepository.find.mockResolvedValue([accountWithChildren]);
+       accountRepository.findOne.mockResolvedValue(accountWithChildren);
+       accountRepository.createQueryBuilder.mockReturnValue({
+         where: jest.fn().mockReturnThis(),
+         getMany: jest.fn().mockResolvedValue([
+           { ...mockAccount, id: 'child-1', path: 'assets:checking:savings' },
+         ]),
+       } as any);
+
+       const mockQueryBuilder = {
+         select: jest.fn().mockReturnThis(),
+         where: jest.fn().mockReturnThis(),
+         innerJoin: jest.fn().mockReturnThis(),
+         andWhere: jest.fn().mockReturnThis(),
+         groupBy: jest.fn().mockReturnThis(),
+         getRawMany: jest.fn().mockResolvedValue([
+           { line_currency: 'USD', total: '100.00' },
+         ]),
+       };
+       journalLineRepository.createQueryBuilder.mockImplementation(() => mockQueryBuilder as any);
+
+       const result = await service.getBalances('tenant-1', {
+         include_subtree: true,
+         subtree_account_ids: ['parent-1'],
+       });
+
+       expect(result.balances).toBeDefined();
+       // Only the parent account should have subtree_currencies if it's in subtree_account_ids
+       const targetAccount = result.balances.find(b => b.account.id === 'parent-1');
+       expect(targetAccount).toHaveProperty('subtree_currencies');
+     });
+
+     it('should convert subtree balances when convert_to is specified', async () => {
+       const accountWithChildren = { ...mockAccount, id: 'parent-1', path: 'assets:checking' };
+       accountRepository.find.mockResolvedValue([accountWithChildren]);
+       accountRepository.findOne.mockResolvedValue(accountWithChildren);
+       accountRepository.createQueryBuilder.mockReturnValue({
+         where: jest.fn().mockReturnThis(),
+         getMany: jest.fn().mockResolvedValue([
+           { ...mockAccount, id: 'child-1', path: 'assets:checking:savings' },
+         ]),
+       } as any);
+
+       const mockQueryBuilder = {
+         select: jest.fn().mockReturnThis(),
+         where: jest.fn().mockReturnThis(),
+         innerJoin: jest.fn().mockReturnThis(),
+         andWhere: jest.fn().mockReturnThis(),
+         groupBy: jest.fn().mockReturnThis(),
+         getRawMany: jest.fn().mockResolvedValue([
+           { line_currency: 'USD', total: '100.00' },
+         ]),
+       };
+       journalLineRepository.createQueryBuilder.mockImplementation(() => mockQueryBuilder as any);
+
+       rateEngine.getRate.mockResolvedValue({
+         from: 'USD',
+         to: 'EUR',
+         rate: 0.85,
+         timestamp: new Date(),
+         source: 'test',
+       });
+
+       const result = await service.getBalances('tenant-1', {
+         include_subtree: true,
+         convert_to: 'EUR',
+       });
+
+       expect(result.balances).toBeDefined();
+       expect(result.balances[0]).toHaveProperty('converted_subtree_total');
+       expect(result.balances[0]).toHaveProperty('converted_subtree_currency');
+       expect(typeof result.balances[0].converted_subtree_total).toBe('number');
+       expect(result.balances[0].converted_subtree_currency).toBe('EUR');
+     });
+   });
+
+  describe('calculateSubtreeBalance', () => {
+    it('should return subtree balance for single account with no children', async () => {
+      const singleAccount = { ...mockAccount };
+      singleAccount.id = 'acc-single';
       
-      const mockQueryBuilder = {
-        select: jest.fn().mockReturnThis(),
+      accountRepository.findOne.mockResolvedValue(singleAccount);
+      accountRepository.createQueryBuilder.mockReturnValue({
         where: jest.fn().mockReturnThis(),
-        innerJoin: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue([]),
-      };
-      journalLineRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
-
-      const result = await service.getBalances('tenant-1', {});
-
-      expect(result.balances).toBeDefined();
-      expect(result.pagination).toBeDefined();
-      expect(result.meta.cache_hit).toBe(false);
-    });
-
-    it('should use cache when available', async () => {
-      const cachedResult = {
-        balances: [],
-        pagination: { offset: 0, limit: 50, total: 0, has_more: false },
-        meta: { cache_hit: false, calculated_at: new Date().toISOString() },
-      };
-
-      jest.spyOn(service as any, 'getFromCache').mockReturnValue(cachedResult);
-
-      accountRepository.find.mockResolvedValue([]);
-
-      const result = await service.getBalances('tenant-1', { use_cache: true });
-
-      expect(result.meta.cache_hit).toBe(true);
-    });
-
-    it('should convert currencies when specified', async () => {
-      accountRepository.find.mockResolvedValue([mockAccount]);
+        getMany: jest.fn().mockResolvedValue([]),
+      } as any);
 
       const mockQueryBuilder = {
         select: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        innerJoin: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
         groupBy: jest.fn().mockReturnThis(),
         getRawMany: jest.fn().mockResolvedValue([
-          { line_currency: 'USD', total: '1000' },
+          { line_currency: 'USD', total: '100.00' },
         ]),
       };
       journalLineRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
-      rateEngine.getRate.mockResolvedValue({
-        from: 'USD',
-        to: 'EUR',
-        rate: 0.85,
-        timestamp: new Date(),
-        source: 'test',
-      });
+      const result = await service.calculateSubtreeBalance('acc-single');
 
-      const result = await service.getBalances('tenant-1', {
-        convert_to: 'EUR',
-        exchange_rate_date: 'latest',
-      });
+      expect(result).toEqual([
+        { currency: 'USD', amount: 100.00 },
+      ]);
+    });
 
-      expect(rateEngine.getRate).toHaveBeenCalled();
+    it('should return subtree balance including children accounts', async () => {
+      accountRepository.findOne.mockResolvedValue({ ...mockAccount, id: 'parent-1', path: 'assets:checking' });
+      accountRepository.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          { ...mockAccount, id: 'child-1', path: 'assets:checking:savings' },
+          { ...mockAccount, id: 'child-2', path: 'assets:checking:current' },
+        ]),
+      } as any);
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          { line_currency: 'USD', total: '100.00' },
+        ]),
+      };
+      journalLineRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+
+      const result = await service.calculateSubtreeBalance('parent-1');
+
+      expect(journalLineRepository.createQueryBuilder).toHaveBeenCalledTimes(3);
+      expect(result).toBeDefined();
+    });
+
+    it('should correctly merge multi-currency balances from all accounts', async () => {
+      accountRepository.findOne.mockResolvedValue({ ...mockAccount, id: 'parent-1', path: 'assets:checking' });
+      accountRepository.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          { ...mockAccount, id: 'child-1', path: 'assets:checking:savings' },
+        ]),
+      } as any);
+
+      let callCount = 0;
+      const mockQueryBuilderFactory = jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            select: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            getRawMany: jest.fn().mockResolvedValue([
+              { line_currency: 'USD', total: '100.00' },
+            ]),
+          };
+        } else {
+          return {
+            select: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            getRawMany: jest.fn().mockResolvedValue([
+              { line_currency: 'EUR', total: '50.00' },
+            ]),
+          };
+        }
+      });
+      journalLineRepository.createQueryBuilder.mockImplementation(mockQueryBuilderFactory);
+
+      const result = await service.calculateSubtreeBalance('parent-1');
+
+      expect(result.some(b => b.currency === 'USD')).toBe(true);
+      expect(result.some(b => b.currency === 'EUR')).toBe(true);
     });
   });
 

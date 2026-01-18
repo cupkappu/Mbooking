@@ -18,6 +18,8 @@ export interface BalanceQuery {
   specific_date?: string;
   pagination?: { offset?: number; limit?: number };
   use_cache?: boolean;
+  include_subtree?: boolean;
+  subtree_account_ids?: string[];
 }
 
 export interface JournalQuery {
@@ -42,6 +44,21 @@ export interface AccountBalance {
   account: Account;
   currencies: CurrencyBalance[];
   converted_amount?: number;
+  subtree_currencies?: CurrencyBalance[];
+  converted_subtree_total?: number;
+  converted_subtree_currency?: string;
+}
+
+export interface DashboardSummary {
+  assets: number;
+  liabilities: number;
+  netWorth: number;
+  recentTransactions: {
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+  }[];
 }
 
 @Injectable()
@@ -88,6 +105,42 @@ export class QueryService {
           query.date_range,
         );
 
+        let result: AccountBalance = { account, currencies: currencyBalances };
+
+        if (query.include_subtree) {
+          const shouldCalculateSubtree = !query.subtree_account_ids || 
+                                        query.subtree_account_ids.includes(account.id);
+          
+          if (shouldCalculateSubtree) {
+            const subtreeBalances = await this.calculateSubtreeBalance(
+              account.id,
+              query.date_range,
+            );
+            
+            result.subtree_currencies = subtreeBalances;
+            
+            if (query.convert_to) {
+              let totalConverted = 0;
+              for (const balance of subtreeBalances) {
+                if (balance.currency === query.convert_to) {
+                  totalConverted += balance.amount;
+                } else {
+                  const individualRate = await this.rateEngine.getRate(
+                    balance.currency,
+                    query.convert_to,
+                    { date: query.specific_date ? new Date(query.specific_date) : undefined }
+                  );
+                  if (individualRate) {
+                    totalConverted += balance.amount * individualRate.rate;
+                  }
+                }
+              }
+              result.converted_subtree_total = totalConverted;
+              result.converted_subtree_currency = query.convert_to;
+            }
+          }
+        }
+
         if (query.convert_to) {
           const converted = await this.convertBalances(
             currencyBalances,
@@ -95,10 +148,10 @@ export class QueryService {
             query.exchange_rate_date,
             query.specific_date,
           );
-          return { account, currencies: converted };
+          result.currencies = converted;
         }
 
-        return { account, currencies: currencyBalances };
+        return result;
       }),
     );
 
@@ -158,6 +211,68 @@ export class QueryService {
       },
       meta: { cache_hit: false },
     };
+  }
+
+  async getSummary(tenantId: string): Promise<DashboardSummary> {
+    // Get all accounts
+    const accounts = await this.accountRepository.find({
+      where: { tenant_id: tenantId, is_active: true },
+    });
+
+    // Calculate total assets
+    const assetAccounts = accounts.filter(a => a.type === 'assets');
+    let totalAssets = 0;
+    for (const account of assetAccounts) {
+      const balances = await this.calculateAccountBalance(account.id);
+      totalAssets += balances.reduce((sum, b) => sum + b.amount, 0);
+    }
+
+    // Calculate total liabilities
+    const liabilityAccounts = accounts.filter(a => a.type === 'liabilities');
+    let totalLiabilities = 0;
+    for (const account of liabilityAccounts) {
+      const balances = await this.calculateAccountBalance(account.id);
+      totalLiabilities += balances.reduce((sum, b) => sum + b.amount, 0);
+    }
+
+    // Get recent transactions
+    const recentEntries = await this.journalEntryRepository.find({
+      where: { tenant_id: tenantId },
+      relations: ['lines'],
+      order: { date: 'DESC', created_at: 'DESC' },
+      take: 10,
+    });
+
+    const recentTransactions = recentEntries.map(entry => {
+      // Calculate net amount for the entry
+      const netAmount = entry.lines.reduce((sum, line) => sum + (line.amount > 0 ? line.converted_amount : 0), 0);
+      return {
+        id: entry.id,
+        date: typeof entry.date === 'string' ? entry.date : entry.date.toISOString().split('T')[0],
+        description: entry.description,
+        amount: netAmount,
+      };
+    });
+
+    return {
+      assets: Math.round(totalAssets * 100) / 100,
+      liabilities: Math.round(totalLiabilities * 100) / 100,
+      netWorth: Math.round((totalAssets - totalLiabilities) * 100) / 100,
+      recentTransactions,
+    };
+  }
+
+  async calculateSubtreeBalance(accountId: string, dateRange?: { from: string; to: string }): Promise<CurrencyBalance[]> {
+    const accountIds = await this.getDescendantIds(accountId);
+    
+    const allBalances: CurrencyBalance[] = [];
+    
+    for (const id of accountIds) {
+      const accountBalance = await this.calculateAccountBalance(id, dateRange);
+      allBalances.push(...accountBalance);
+    }
+    
+    return this.mergeCurrencies(allBalances);
   }
 
   private async calculateAccountBalance(accountId: string, dateRange?: { from: string; to: string }): Promise<CurrencyBalance[]> {
@@ -243,22 +358,24 @@ export class QueryService {
       const mergedCurrencies = this.mergeCurrencies(group.flatMap((b) => b.currencies));
       const pathParts = key.split(':');
 
+      const mergedAccount: Account = {
+        id: group[0].account.id,
+        parent: group[0].account.parent,
+        children: [],
+        path: key,
+        name: pathParts[pathParts.length - 1] || key,
+        type: group[0].account.type,
+        depth: pathParts.length,
+        tenant_id: group[0].account.tenant_id,
+        currency: group[0].account.currency,
+        is_active: true,
+        created_at: group[0].account.created_at,
+        updated_at: group[0].account.updated_at,
+        deleted_at: null,
+      };
+
       return {
-        account: {
-          id: group[0].account.id,
-          parent_id: group[0].account.parent_id || null,
-          children: [],
-          path: key,
-          name: pathParts[pathParts.length - 1] || key,
-          type: group[0].account.type,
-          depth: pathParts.length,
-          tenant_id: group[0].account.tenant_id,
-          currency: group[0].account.currency,
-          is_active: true,
-          created_at: group[0].account.created_at,
-          updated_at: group[0].account.updated_at,
-          deleted_at: null,
-        },
+        account: mergedAccount,
         currencies: mergedCurrencies,
       };
     });

@@ -1,15 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { useJournalEntries, useAccounts, useCreateJournalEntry } from '@/hooks/use-api';
+import { useJournalEntries, useAccounts, useCreateJournalEntry, useDeleteJournalEntry } from '@/hooks/use-api';
 import type { JournalEntry, Account } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Edit2, Trash2, Calendar, FileText } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function JournalPage() {
   const { data: journalData, isLoading, refetch } = useJournalEntries();
   const { data: accounts } = useAccounts();
   const createEntry = useCreateJournalEntry();
+  const deleteEntry = useDeleteJournalEntry();
 
   const [showForm, setShowForm] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [deletingEntry, setDeletingEntry] = useState<JournalEntry | null>(null);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     description: '',
@@ -18,6 +35,30 @@ export default function JournalPage() {
       { account_id: '', amount: 0, currency: 'USD', tags: [] as string[] },
     ],
   });
+
+  // Helper to handle amount changes including negative numbers
+  const handleAmountChange = (index: number, value: string) => {
+    const numValue = value === '' ? 0 : parseFloat(value);
+    updateLine(index, 'amount', isNaN(numValue) ? 0 : numValue);
+  };
+
+  const handleEdit = (entry: JournalEntry) => {
+    setEditingEntry(entry);
+    setFormData({
+      date: new Date(entry.date).toISOString().split('T')[0],
+      description: entry.description,
+      lines: entry.lines?.map(line => ({
+        account_id: line.account_id,
+        amount: parseFloat(String(line.amount)) || 0,
+        currency: line.currency,
+        tags: line.tags || [],
+      })) || [
+        { account_id: '', amount: 0, currency: 'USD', tags: [] },
+        { account_id: '', amount: 0, currency: 'USD', tags: [] },
+      ],
+    });
+    setShowForm(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +72,7 @@ export default function JournalPage() {
     });
     
     setShowForm(false);
+    setEditingEntry(null);
     setFormData({
       date: new Date().toISOString().split('T')[0],
       description: '',
@@ -55,6 +97,21 @@ export default function JournalPage() {
     setFormData({ ...formData, lines: newLines });
   };
 
+  const removeLine = (index: number) => {
+    if (formData.lines.length > 2) {
+      const newLines = formData.lines.filter((_, i) => i !== index);
+      setFormData({ ...formData, lines: newLines });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deletingEntry) {
+      await deleteEntry.mutateAsync(deletingEntry.id);
+      setDeletingEntry(null);
+      refetch();
+    }
+  };
+
   const getAccountName = (id: string): string => {
     const account = accounts?.find((a: Account) => a.id === id);
     return account?.path || 'Unknown';
@@ -65,7 +122,7 @@ export default function JournalPage() {
   };
 
   if (isLoading) {
-    return <div className="p-8">Loading...</div>;
+    return <div className="p-8 text-center">Loading journal entries...</div>;
   }
 
   return (
@@ -75,149 +132,282 @@ export default function JournalPage() {
           <h1 className="text-3xl font-bold">Journal</h1>
           <p className="text-muted-foreground">Record your financial transactions</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-        >
+        <Button onClick={() => {
+          setEditingEntry(null);
+          setFormData({
+            date: new Date().toISOString().split('T')[0],
+            description: '',
+            lines: [
+              { account_id: '', amount: 0, currency: 'USD', tags: [] },
+              { account_id: '', amount: 0, currency: 'USD', tags: [] },
+            ],
+          });
+          setShowForm(true);
+        }}>
+          <Plus className="h-4 w-4 mr-2" />
           New Entry
-        </button>
+        </Button>
       </div>
 
       {showForm && (
-        <div className="p-6 bg-card rounded-lg border">
-          <h2 className="text-xl font-semibold mb-4">Create Journal Entry</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Date</label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Journal Lines</label>
-              {formData.lines.map((line, index) => (
-                <div key={index} className="flex gap-2 items-center">
-                  <select
-                    value={line.account_id}
-                    onChange={(e) => updateLine(index, 'account_id', e.target.value)}
-                    className="flex-1 px-3 py-2 border rounded-md"
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingEntry ? 'Edit Journal Entry' : 'Create Journal Entry'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Date</label>
+                  <Input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     required
-                  >
-                    <option value="">Select Account</option>
-                    {accounts?.map((account: Account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.path} ({account.type})
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={line.amount}
-                    onChange={(e) => updateLine(index, 'amount', parseFloat(e.target.value) || 0)}
-                    className="w-32 px-3 py-2 border rounded-md"
-                    placeholder="Amount"
-                    required
-                  />
-                  <input
-                    type="text"
-                    value={line.currency}
-                    onChange={(e) => updateLine(index, 'currency', e.target.value.toUpperCase())}
-                    className="w-20 px-3 py-2 border rounded-md"
-                    placeholder="USD"
-                    maxLength={3}
                   />
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={addLine}
-                className="text-sm text-primary hover:underline"
-              >
-                + Add Line
-              </button>
-            </div>
-
-            <div className="p-4 bg-muted rounded-md">
-              <div className="flex justify-between">
-                <span>Total:</span>
-                <span className={calculateTotal(formData.lines) !== 0 ? 'text-red-500' : ''}>
-                  {calculateTotal(formData.lines).toFixed(2)}
-                </span>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Input
+                    type="text"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Transaction description"
+                    required
+                  />
+                </div>
               </div>
-              {calculateTotal(formData.lines) !== 0 && (
-                <p className="text-xs text-red-500 mt-1">Entry must balance (total = 0)</p>
-              )}
-            </div>
 
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={createEntry.isPending || calculateTotal(formData.lines) !== 0}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
-              >
-                {createEntry.isPending ? 'Creating...' : 'Create Entry'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 border rounded-md hover:bg-accent"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Journal Lines</label>
+                {formData.lines.map((line, index) => (
+                  <div key={index} className="flex gap-2 items-start">
+                    <Select
+                      value={line.account_id}
+                      onValueChange={(value) => updateLine(index, 'account_id', value)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts?.map((account: Account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.path} ({account.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    <Input
+                      type="number"
+                      step="any"
+                      placeholder="Amount"
+                      value={line.amount === 0 ? '' : line.amount}
+                      onChange={(e) => handleAmountChange(index, e.target.value)}
+                      className="w-32"
+                      required
+                    />
+                    
+                    <Input
+                      type="text"
+                      value={line.currency}
+                      onChange={(e) => updateLine(index, 'currency', e.target.value.toUpperCase())}
+                      className="w-20"
+                      maxLength={3}
+                    />
+                    
+                    {formData.lines.length > 2 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10"
+                        onClick={() => removeLine(index)}
+                      >
+                        <span className="sr-only">Remove</span>
+                        ×
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addLine}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Add Line
+                </Button>
+              </div>
+
+              <div className={`p-4 rounded-lg ${
+                calculateTotal(formData.lines) === 0 
+                  ? 'bg-muted' 
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total:</span>
+                  <span className={
+                    calculateTotal(formData.lines) === 0 
+                      ? '' 
+                      : 'text-red-600 font-bold'
+                  }>
+                    ${calculateTotal(formData.lines).toFixed(2)}
+                  </span>
+                </div>
+                {calculateTotal(formData.lines) !== 0 && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Entry must balance (total must be 0)
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="submit"
+                  disabled={createEntry.isPending || calculateTotal(formData.lines) !== 0}
+                >
+                  {createEntry.isPending ? 'Saving...' : (editingEntry ? 'Update Entry' : 'Create Entry')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingEntry(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
       <div className="space-y-4">
         {journalData?.entries?.map((entry: JournalEntry) => (
-          <div key={entry.id} className="p-6 bg-card rounded-lg border">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(entry.date).toLocaleDateString()}
-                </p>
-                <h3 className="font-semibold">{entry.description}</h3>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {entry.lines?.map((line, index) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span>{getAccountName(line.account_id)}</span>
-                  <span className={line.amount < 0 ? 'text-red-500' : 'text-green-500'}>
-                    {line.amount < 0 ? '-' : '+'}
-                    ${Math.abs(line.amount).toFixed(2)} {line.currency}
-                  </span>
+          <Card key={entry.id} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(entry.date).toLocaleDateString()}
+                  </div>
+                  <Badge variant="secondary">
+                    {entry.lines?.length || 0} lines
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(entry)}
+                  >
+                    <Edit2 className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeletingEntry(entry)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="font-semibold">{entry.description}</span>
+              </div>
+              
+              {entry.lines && entry.lines.length > 0 ? (
+                <div className="space-y-2 bg-muted/30 rounded-lg p-3">
+                  {entry.lines.map((line, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {getAccountName(line.account_id)}
+                      </span>
+                      <span className={
+                        parseFloat(String(line.amount)) < 0 
+                          ? 'text-red-600 font-medium' 
+                          : 'text-green-600 font-medium'
+                      }>
+                        {parseFloat(String(line.amount)) < 0 ? '-' : '+'}
+                        ${Math.abs(parseFloat(String(line.amount))).toFixed(2)} {line.currency}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No line items</p>
+              )}
+            </CardContent>
+          </Card>
         ))}
 
         {(!journalData?.entries || journalData.entries.length === 0) && (
-          <p className="text-center text-muted-foreground py-8">
-            No journal entries yet. Create your first entry to record a transaction.
-          </p>
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No journal entries yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first entry to record a transaction.
+              </p>
+              <Button
+                onClick={() => {
+                  setFormData({
+                    date: new Date().toISOString().split('T')[0],
+                    description: '',
+                    lines: [
+                      { account_id: '', amount: 0, currency: 'USD', tags: [] },
+                      { account_id: '', amount: 0, currency: 'USD', tags: [] },
+                    ],
+                  });
+                  setShowForm(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Entry
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingEntry} onOpenChange={() => setDeletingEntry(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Journal Entry</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this journal entry "{deletingEntry?.description}"? 
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeletingEntry(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteEntry.isPending}
+            >
+              {deleteEntry.isPending ? 'Deleting...' : 'Delete Entry'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
