@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/dialog';
 import { currenciesApi } from '@/lib/currencies';
 import type { Currency } from '@/types/currency';
+import { BalanceCell } from '@/components/accounts/BalanceCell';
+import type { CurrencyBalance, AccountBalance } from '@/types';
 
 function formatCurrency(amount: number, currency: string = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
@@ -30,34 +32,8 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
   }).format(amount);
 }
 
-function getAccountBalance(accountId: string, balancesData: Map<string, number>): number {
-  return balancesData.get(accountId) ?? 0;
-}
-
-function BalanceCell({ 
-  amount, 
-  currency,
-  isLoading,
-  displayCurrency,
-}: { 
-  amount: number; 
-  currency: string;
-  isLoading: boolean;
-  displayCurrency: string;
-}) {
-  if (isLoading) {
-    return <span className="text-muted-foreground">--</span>;
-  }
-  
-  const isNegative = amount < 0;
-  const displayAmount = Math.abs(amount);
-  
-  return (
-    <span className={isNegative ? 'text-red-600 font-medium' : 'font-medium'}>
-      {isNegative && '-'}
-      {formatAmount(displayAmount)} {displayCurrency}
-    </span>
-  );
+function getAccountBalance(accountId: string, balancesData: Map<string, AccountBalance>): AccountBalance | undefined {
+  return balancesData.get(accountId);
 }
 
 function formatAmount(amount: number): string {
@@ -85,7 +61,7 @@ export default function AccountsPage() {
   const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([]);
 
   const { data: accounts, isLoading: accountsLoading, refetch: refetchAccounts } = useAccounts();
-  const { data: balancesData, isLoading: balancesLoading, refetch: refetchBalances } = useBalances({ depth: 1, convert_to: displayCurrency });
+  const { data: balancesData, isLoading: balancesLoading, refetch: refetchBalances } = useBalances({ depth: 1, convert_to: displayCurrency, include_subtree: true });
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
@@ -111,11 +87,10 @@ export default function AccountsPage() {
   }, []);
 
   const balanceMap = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, AccountBalance>();
     if (balancesData?.balances) {
       for (const item of balancesData.balances) {
-        const totalAmount = item.currencies.reduce((sum, c) => sum + c.amount, 0);
-        map.set(item.account.id, totalAmount);
+        map.set(item.account.id, item);
       }
     }
     return map;
@@ -272,12 +247,17 @@ export default function AccountsPage() {
             <Badge variant="outline" className="text-xs shrink-0">
               {account.type}
             </Badge>
-            
+
             <span className="text-sm text-muted-foreground shrink-0">{account.currency}</span>
-            
-             <div className="w-32 text-right shrink-0">
-               <BalanceCell amount={balance} currency={account.currency} isLoading={isLoading} displayCurrency={displayCurrency} />
-             </div>
+
+            <div className="w-48 text-right shrink-0">
+              <BalanceCell
+                currencies={balance?.currencies || []}
+                subtreeCurrencies={balance?.subtree_currencies}
+                convertedSubtreeTotal={balance?.converted_subtree_total}
+                displayCurrency={displayCurrency}
+              />
+            </div>
             
             <div className="flex items-center gap-1 shrink-0">
               <Button
@@ -401,7 +381,7 @@ export default function AccountsPage() {
             <div className="min-w-0">Account</div>
             <div className="w-20">Type</div>
             <div className="w-16">Currency</div>
-            <div className="w-32 text-right">Balance</div>
+            <div className="w-48 text-right">Balance</div>
             <div className="w-20" />
           </div>
 
