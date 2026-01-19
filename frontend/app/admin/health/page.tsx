@@ -1,7 +1,5 @@
 'use client';
 
-// Force dynamic rendering to avoid SSR pre-rendering issues
-export const dynamic = 'force-dynamic';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

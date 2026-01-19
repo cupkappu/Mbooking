@@ -16,6 +16,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: any) {
     // For personal accounting, use user ID as tenant if tenant_id is null
     const tenantId = payload.tenant_id || payload.sub;
-    return { userId: payload.sub, email: payload.email, tenantId };
+    return { userId: payload.sub, email: payload.email, tenantId, role: payload.role };
   }
 }

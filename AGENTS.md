@@ -16,13 +16,15 @@ Personal accounting software with double-entry bookkeeping, multi-currency suppo
 
 ```
 multi_currency_accounting/
-├── frontend/              # Next.js 14 App Router (Port 3000)
+├── frontend/              # Next.js 14 App Router (Port 8068)
 │   ├── app/              # Pages + API routes
 │   ├── components/       # UI + feature components
 │   ├── hooks/           # Custom React hooks
 │   ├── lib/             # Utilities + API client
+│   ├── providers/       # Context providers (session, query)
+│   ├── tests/           # Test utilities
 │   └── types/           # TypeScript definitions
-├── backend/              # NestJS 10 (Port 3001)
+├── backend/              # NestJS 10 (Port 8067)
 │   ├── src/
 │   │   ├── auth/        # JWT + NextAuth integration
 │   │   ├── accounts/    # Account CRUD + hierarchy
@@ -35,15 +37,91 @@ multi_currency_accounting/
 │   │   ├── reports/     # Financial statements
 │   │   ├── tenants/     # Multi-tenant RLS
 │   │   ├── currencies/  # Currency registry
-│   │   └── common/      # Shared utilities
-│   └── plugins/         # JS provider plugins
-├── shared/               # Shared TypeScript types
+│   │   ├── admin/       # Admin panel module
+│   │   └── common/      # Shared utilities, seeds
+│   └── plugins/         # JS provider plugins (mounted volume)
+├── shared/               # Shared TypeScript types (TODO: create)
 ├── docs/
 │   ├── requirements/    # Decomposed requirements
 │   └── architecture/    # Design documents
 └── database/
-    ├── migrations/      # TypeORM migrations
+    ├── migrations/      # TypeORM migrations (TODO: create)
     └── seeders/         # Seed data
+```
+
+---
+
+## Entry Points
+
+### Backend
+| File | Purpose |
+|------|---------|
+| `backend/src/main.ts` | Bootstrap: NestFactory, CORS, ValidationPipe, Swagger at `/api/docs` |
+| `backend/src/app.module.ts` | Root module importing 12 feature modules |
+| `backend/src/auth/authelia.middleware.ts` | Authelia SSO integration (optional) |
+
+### Frontend
+| File | Purpose |
+|------|---------|
+| `frontend/app/page.tsx` | Root: dynamic import with `ssr: false` for LandingPageContent |
+| `frontend/app/layout.tsx` | Root layout with AppProviders (Session + Query) |
+| `frontend/app/api/auth/[...nextauth]/route.ts` | NextAuth.js handler |
+| `frontend/providers/app-providers.tsx` | SessionProvider + QueryProvider wrapper |
+| `(dashboard)/layout.tsx` | Sidebar nav, SessionSync, UserMenu |
+| `(auth)/layout.tsx` | Centered auth layout |
+| `(admin)/layout.tsx` | Admin panel layout (8 nav items) |
+
+---
+
+## CI/CD Pipeline
+
+### GitHub Actions Workflows
+| File | Triggers | Purpose |
+|------|----------|---------|
+| `.github/workflows/docker-build.yml` | master push, v* tags | Multi-arch Docker build → GHCR |
+| `.github/workflows/docker-ci.yml` | master/develop push | Docker validation, unit tests |
+
+### Docker Configuration
+- **Multi-stage builds**: `node:20-alpine` base, non-root user (UID/GID 99999)
+- **Frontend**: Standalone output mode for minimal image
+- **Backend**: Plugins directory copied separately for hot-reload
+- **Services**: PostgreSQL 15 (5432), Backend (8067), Frontend (8068)
+- **Resource limits**: Backend (1 CPU, 1GB), Frontend (0.5 CPU, 512MB)
+
+### Non-Standard Patterns
+- Chinese comments in GitHub Actions workflows
+- Multi-architecture builds (amd64/arm64) via Buildx
+- TypeScript source validation in CI (fails if .ts in production image)
+- CI-aware Playwright: `forbidOnly: true`, retries on CI only, sequential workers
+
+---
+
+## Configuration Files
+
+### TypeScript
+| Location | Strictness | Key Settings |
+|----------|------------|--------------|
+| `frontend/tsconfig.json` | **Strict** | `strict: true`, ESNext, path aliases `@/*` → `./*` |
+| `backend/tsconfig.json` | Relaxed | `strictNullChecks: false`, `noImplicitAny: false`, decorators enabled |
+
+### Key Configs
+- `frontend/next.config.mjs`: Standalone output, API rewrites (`/api/v1/*` → backend)
+- `frontend/tailwind.config.ts`: shadcn/ui, dark mode, custom animations
+- `frontend/jest.config.ts`: Coverage enabled, path aliases
+- `playwright.config.ts`: 7 browser projects (Chromium, Firefox, WebKit, mobile)
+- `docker-compose.yml`: Resource limits, health checks, plugin volume mount
+
+### Environment Variables
+```bash
+# Required
+DATABASE_*              # PostgreSQL connection
+JWT_SECRET              # Min 32 chars
+NEXTAUTH_URL/SECRET     # NextAuth
+NEXT_PUBLIC_API_URL     # Backend URL
+
+# Optional
+GOOGLE_CLIENT_*/        # OAuth
+AUTHELIA_URL/API_KEY    # SSO
 ```
 
 ---
@@ -238,6 +316,8 @@ docker-compose logs -f  # View logs
 - **NEVER** expose raw TypeORM entities → use DTOs
 - **NEVER** skip validation → use class-validator DTOs
 - **NEVER** embed secrets in frontend → use env vars only
+- **NEVER** use `float` for money → use `decimal` type
+- **NEVER** use `any` type in TypeScript → use proper types
 
 ---
 
@@ -249,6 +329,31 @@ docker-compose logs -f  # View logs
 4. **Journal balance:** Debits must equal credits; validated before save
 5. **Provider plugins:** Hot-reloaded on config change; test before use
 6. **Currency decimals:** Fiat = 2 decimals, Crypto = 8 decimals
+7. **TypeORM synchronize:** Currently `true` - migrations not yet implemented
+8. **Missing data-source.ts:** Migration CLI commands require config file
+9. **Non-standard ports:** Backend 8067, Frontend 8068 (not 3000/3001)
+10. **No shared types:** Shared directory exists but not populated
+
+---
+
+## Non-Standard Patterns (This Project)
+
+### CI/CD
+- Chinese comments in GitHub Actions workflows
+- Multi-architecture Docker builds (amd64/arm64)
+- TypeScript source validation in CI (fails if .ts in production image)
+- CI-aware Playwright: `forbidOnly: true`, retries on CI only, sequential workers
+
+### TypeScript
+- Frontend: Strict mode enabled
+- Backend: Relaxed strictness (`strictNullChecks: false`, `noImplicitAny: false`)
+- Path aliases differ: `@/*` → `./*` (frontend), `@/*` → `src/*` (backend)
+
+### Docker
+- Non-root user UID/GID 99999 (avoids host conflicts)
+- Frontend standalone output mode
+- Backend plugins directory as mounted volume
+- Resource limits in development compose
 
 ---
 
@@ -258,3 +363,14 @@ docker-compose logs -f  # View logs
 - All admin actions logged to `admin_audit_logs` table
 - Rate providers can be JS plugins or REST API configs
 - Reports generated on-demand; can be cached for 1 hour
+
+---
+
+## Missing/Issues to Address
+
+| Issue | Location | Impact |
+|-------|----------|--------|
+| Missing `data-source.ts` | `backend/src/config/` | Migration CLI commands fail |
+| No `shared/` types | Root | Type duplication between frontend/backend |
+| `synchronize: true` | `app.module.ts` | Dangerous for production |
+| No migrations | `database/migrations/` | No schema version control |

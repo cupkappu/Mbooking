@@ -40,6 +40,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       tenant_id: user.tenant_id,
+      role: user.role,
     };
 
     return {
@@ -48,6 +49,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       },
     };
   }

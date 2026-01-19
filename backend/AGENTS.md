@@ -313,3 +313,48 @@ npm run migration:revert
 - **NEVER** hard delete → use `deleted_at`
 - **NEVER** bypass RLS → always use tenant filter
 - **NEVER** use `float` for money → use `decimal`
+
+---
+
+## Testing Conventions
+
+### Backend Test Pattern
+```typescript
+// *.spec.ts files co-located with modules
+describe('ServiceName', () => {
+  let service: ServiceName;
+  let repository: jest.Mocked<Repository<Entity>>;
+  
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        ServiceName,
+        { provide: getRepositoryToken(Entity), useValue: { ... } },
+      ],
+    }).compile();
+    service = module.get<ServiceName>(ServiceName);
+  });
+});
+```
+
+### Test Files
+- `backend/src/*.spec.ts` - Service tests (co-located)
+- `backend/src/comprehensive.tdd.spec.ts` - Giant 973-line integration test (anti-pattern)
+
+### Backend Jest Config (embedded in package.json)
+```json
+"jest": {
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "src",
+  "testRegex": ".*\\.spec\\.ts$",
+  "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+  "collectCoverageFrom": ["**/*.(t|j)s"]
+}
+```
+
+### Critical Issues
+
+1. **Missing `data-source.ts`**: Migration CLI commands require `backend/src/config/data-source.ts`
+2. **`synchronize: true` in app.module.ts**: Dangerous for production - use migrations instead
+3. **TypeScript strictness**: Backend uses relaxed settings (`strictNullChecks: false`, `noImplicitAny: false`)
+4. **Giant TDD test**: `comprehensive.tdd.spec.ts` contains tests for ALL services (not recommended)

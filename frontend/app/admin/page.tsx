@@ -6,8 +6,6 @@ import { useAdminHealth } from '@/hooks/use-admin';
 import { useAdminUsers } from '@/hooks/use-admin';
 import { useAdminProviders } from '@/hooks/use-admin';
 
-// Force dynamic rendering to avoid SSR pre-rendering issues
-export const dynamic = 'force-dynamic';
 
 export default function AdminDashboard() {
   const { data: health } = useAdminHealth();

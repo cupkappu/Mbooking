@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { QueryProvider } from '@/providers/query-provider';
 import { SessionProvider } from '@/providers/session-provider';
 import { SessionSync } from '@/components/session-sync';
 import { UserMenu } from '@/components/layout/user-menu';
+import { Shield } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
@@ -22,6 +24,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === 'admin';
 
   return (
     <SessionProvider>
@@ -52,6 +56,27 @@ export default function DashboardLayout({
                   </Link>
                 );
               })}
+              {isAdmin && (
+                <>
+                  <div className="pt-4 pb-2">
+                    <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Administration
+                    </p>
+                  </div>
+                  <Link
+                    href="/admin"
+                    className={cn(
+                      'block px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2',
+                      pathname.startsWith('/admin')
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent'
+                    )}
+                  >
+                    <Shield className="h-4 w-4" />
+                    Admin Panel
+                  </Link>
+                </>
+              )}
             </nav>
           </aside>
 

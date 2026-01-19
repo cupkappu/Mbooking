@@ -285,11 +285,15 @@ export default function AccountsPage() {
               <span className="font-medium truncate block">{account.name}</span>
             </div>
             
-            <Badge variant="outline" className="text-xs shrink-0">
-              {account.type}
-            </Badge>
+            <div className="w-20 flex-shrink-0">
+              <Badge variant="outline" className="text-xs">
+                {account.type}
+              </Badge>
+            </div>
 
-            <span className="text-sm text-muted-foreground shrink-0">{account.currency}</span>
+            <div className="w-16 flex-shrink-0 text-sm text-muted-foreground">
+              {account.currency}
+            </div>
 
             <div className="w-36 text-right shrink-0">
               <BalanceCell
@@ -305,8 +309,8 @@ export default function AccountsPage() {
                 displayCurrency={displayCurrency}
               />
             </div>
-            
-            <div className="flex items-center gap-1 shrink-0">
+
+            <div className="w-24 flex items-center justify-end gap-1 shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
@@ -422,15 +426,15 @@ export default function AccountsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-[auto_auto_1fr_auto_auto_auto_auto] gap-2 px-3 pb-2 text-sm text-muted-foreground border-b">
-            <div className="w-6" />
-            <div className="w-6" />
-            <div className="min-w-0">Account</div>
-            <div className="w-20">Type</div>
-            <div className="w-16">Currency</div>
-            <div className="w-36 text-right">Balance</div>
-            <div className="w-36 text-right">Total</div>
-            <div className="w-20" />
+          <div className="flex items-center gap-2 px-3 pb-2 text-sm text-muted-foreground border-b">
+            <div className="w-6 flex-shrink-0" />
+            <div className="w-6 flex-shrink-0" />
+            <div className="min-w-0 flex-1">Account</div>
+            <div className="w-20 flex-shrink-0">Type</div>
+            <div className="w-16 flex-shrink-0">Currency</div>
+            <div className="w-36 flex-shrink-0 text-right">Balance</div>
+            <div className="w-36 flex-shrink-0 text-right">Total</div>
+            <div className="w-24 flex-shrink-0 text-right">Actions</div>
           </div>
 
           {filteredAccounts && filteredAccounts.length > 0 ? (

@@ -1,7 +1,5 @@
 'use client';
 
-// Force dynamic rendering to avoid SSR pre-rendering issues
-export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
 import {

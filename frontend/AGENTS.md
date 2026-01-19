@@ -259,6 +259,66 @@ npm run test:coverage     # Coverage report
 
 ---
 
+## CI/CD Patterns
+
+1. **Next.js Standalone Output**: `output: 'standalone'` in next.config.mjs for minimal Docker images
+2. **CI-Aware Playwright**:
+   - `forbidOnly: !!process.env.CI` - Fails build if test.only left in code
+   - `retries: process.env.CI ? 2 : 0` - Retries only in CI
+   - `workers: process.env.CI ? 1 : undefined` - Sequential in CI
+   - `reuseExistingServer: !process.env.CI` - Fresh server in CI
+3. **Multi-browser Testing**: 7 projects (Chromium, Firefox, WebKit, mobile)
+
+---
+
+## Testing Conventions
+
+### Frontend Test Structure
+```
+frontend/
+├── jest.config.ts              # Jest config with path aliases
+├── jest.setup.js               # Global mocks (NextAuth, next/navigation, React Query)
+├── playwright.config.ts        # E2E config (port 3000, auto webServer)
+├── app/**/*.spec.tsx          # Component tests
+├── hooks/*.spec.tsx           # Hook tests
+├── lib/*.spec.ts              # Utility tests
+└── tests/                     # E2E tests
+    ├── utils/
+    │   ├── auth.ts            # Login helpers
+    │   ├── test-data.ts       # Constants
+    │   └── page-objects.ts
+    └── *.spec.ts              # E2E specs
+```
+
+### Jest Config (frontend/jest.config.ts)
+- `collectCoverage: true`, coverageProvider: 'v8'
+- Path aliases: `@/`, `@/components/`, `@/lib/`, `@/hooks/`, `@/types/`
+- Environment: jsdom
+- Global mocks in `jest.setup.js`
+
+### Playwright Multi-Browser
+```typescript
+projects: [
+  { name: 'chromium', use: devices['Desktop Chrome'] },
+  { name: 'firefox', use: devices['Desktop Firefox'] },
+  { name: 'webkit', use: devices['Desktop Safari'] },
+  { name: 'Mobile Chrome', use: devices['Pixel 5'] },
+  { name: 'Mobile Safari', use: devices['iPhone 12'] },
+  // ... 2 more mobile projects
+]
+```
+
+### Test Scripts
+```bash
+npm run test              # Jest unit tests
+npm run test:watch        # Jest watch mode
+npm run test:coverage     # Coverage report
+npm run test:e2e          # Playwright E2E (port 3000)
+npm run test:e2e:ui       # Playwright UI mode
+```
+
+---
+
 ## Routing Patterns
 
 ### Dynamic Routes
