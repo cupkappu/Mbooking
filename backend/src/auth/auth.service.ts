@@ -127,7 +127,9 @@ export class AuthService {
         settings: { default_currency: 'USD', timezone: 'UTC' },
         is_active: true,
       });
-      
+
+      await this.userRepository.update(user.id, { tenant_id: tenant.id });
+
       this.logger.log(`Created tenant ${tenant.id} for user ${user.id}`);
     }
   }

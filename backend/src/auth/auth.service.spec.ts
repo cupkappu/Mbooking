@@ -52,6 +52,7 @@ describe('AuthService', () => {
             findOne: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
+            update: jest.fn(),
           },
         },
         {
@@ -202,6 +203,7 @@ describe('AuthService', () => {
     it('should create a tenant for a user if it does not exist', async () => {
       (tenantsService.findByUserId as jest.Mock).mockRejectedValue(new Error('Tenant not found'));
       (tenantsService.create as jest.Mock).mockResolvedValue(mockTenant);
+      userRepository.update.mockResolvedValue({ affected: 1 } as any);
       const userWithoutTenant = { ...mockUser, tenant_id: null };
       
       await expect((service as any).ensureTenantExists(userWithoutTenant)).resolves.not.toThrow();
@@ -212,6 +214,7 @@ describe('AuthService', () => {
         settings: { default_currency: 'USD', timezone: 'UTC' },
         is_active: true,
       });
+      expect(userRepository.update).toHaveBeenCalledWith(userWithoutTenant.id, { tenant_id: mockTenant.id });
     });
 
     it('should not create a tenant if it already exists', async () => {

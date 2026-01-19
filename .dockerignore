@@ -45,3 +45,20 @@ temp/
 # Misc
 *.tsbuildinfo
 .eslintcache
+
+# Source code exclusions (handled by Dockerfile)
+*.spec.ts
+*.spec.tsx
+*.test.ts
+*.test.tsx
+__tests__/
+tests/
+src/tests/
+
+# CI/CD
+.github/
+.github/workflows/
+docker-compose*.yml
+*.md
+!README.md
+AGENTS.md

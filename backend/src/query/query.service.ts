@@ -310,9 +310,13 @@ export class QueryService {
     const account = await this.accountRepository.findOne({ where: { id: accountId, tenant_id: tenantId } });
     if (!account) return [accountId];
 
+    // IMPORTANT: Use exact path prefix with colon to avoid matching similar names
+    // e.g., 'test' should only match 'test:child', NOT 'test3' or 'testAccount'
+    const pathPrefix = account.path.endsWith(':') ? account.path : account.path + ':';
+
     const descendants = await this.accountRepository
       .createQueryBuilder('account')
-      .where('account.path LIKE :path', { path: `${account.path}%` })
+      .where('account.path LIKE :pathPrefix', { pathPrefix: pathPrefix + '%' })
       .andWhere('account.id != :accountId', { accountId })
       .andWhere('account.tenant_id = :tenantId', { tenantId })
       .getMany();

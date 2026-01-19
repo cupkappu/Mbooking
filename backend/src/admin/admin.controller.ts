@@ -56,8 +56,9 @@ export class AdminController {
     @Req() req: RequestWithIp,
     @Body() body: { email: string; name: string; password: string; role: string },
   ) {
-    const tenantId = (req as any).user?.tenant_id || 'system';
-    const adminId = (req as any).user?.id;
+    // JWT strategy returns tenantId/userId (camelCase), not tenant_id/id (snake_case)
+    const tenantId = (req as any).user?.tenantId || 'system';
+    const adminId = (req as any).user?.userId || (req as any).user?.sub;
     const user = await this.adminService.createUser(
       tenantId,
       body,
