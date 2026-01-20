@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -14,6 +15,8 @@ import { Currency } from '../currencies/currency.entity';
 import { ExchangeRate } from '../rates/exchange-rate.entity';
 import { Budget } from '../budgets/budget.entity';
 import { Provider, ProviderType } from '../rates/provider.entity';
+import { CurrenciesService } from '../currencies/currencies.service';
+import { CreateCurrencyDto, UpdateCurrencyDto } from '../currencies/dto/currency.dto';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { TenantContext } from '../common/context/tenant.context';
@@ -100,6 +103,7 @@ export class AdminService {
     private budgetRepository: Repository<Budget>,
     @InjectRepository(Provider)
     private providerRepository: Repository<Provider>,
+    private currenciesService: CurrenciesService,
   ) {}
 
   // =========================================================================
@@ -1019,6 +1023,99 @@ export class AdminService {
       message: 'Plugin reloaded successfully',
       plugin: plugin.name,
     };
+  }
+
+  // =========================================================================
+  // Currency Management
+  // =========================================================================
+
+  async createCurrency(
+    dto: CreateCurrencyDto,
+    adminId: string,
+    ipAddress?: string,
+  ): Promise<Currency> {
+    const existing = await this.currenciesService.findByCode(dto.code).catch(() => null);
+    if (existing) {
+      throw new ConflictException(`Currency '${dto.code}' already exists`);
+    }
+
+    const currency = await this.currenciesService.create(dto);
+
+    await this.log(
+      adminId,
+      'admin.currency.create',
+      'currency',
+      currency.code,
+      null,
+      currency,
+      ipAddress,
+    );
+
+    return currency;
+  }
+
+  async updateCurrency(
+    code: string,
+    dto: UpdateCurrencyDto,
+    adminId: string,
+    ipAddress?: string,
+  ): Promise<Currency> {
+    const currency = await this.currenciesService.update(code, dto);
+
+    await this.log(
+      adminId,
+      'admin.currency.update',
+      'currency',
+      code,
+      null,
+      dto,
+      ipAddress,
+    );
+
+    return currency;
+  }
+
+  async deleteCurrency(
+    code: string,
+    adminId: string,
+    ipAddress?: string,
+  ): Promise<void> {
+    await this.currenciesService.delete(code);
+
+    await this.log(
+      adminId,
+      'admin.currency.delete',
+      'currency',
+      code,
+      null,
+      { deleted: true },
+      ipAddress,
+    );
+  }
+
+  async seedCurrencies(
+    adminId: string,
+    ipAddress?: string,
+  ): Promise<{ added: number; skipped: number }> {
+    const results = await this.currenciesService.seedDefaultCurrencies();
+
+    await this.log(
+      adminId,
+      'admin.currency.seed',
+      'currency',
+      'system',
+      null,
+      results,
+      ipAddress,
+    );
+
+    return results;
+  }
+
+  async getAllCurrencies(): Promise<Currency[]> {
+    return this.currencyRepository.find({
+      order: { code: 'ASC' },
+    });
   }
 
   // =========================================================================

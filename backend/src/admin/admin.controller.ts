@@ -18,6 +18,7 @@ import { AdminService, PaginationParams, LogQueryParams, BulkUserAction, SystemC
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CreateCurrencyDto, UpdateCurrencyDto } from '../currencies/dto/currency.dto';
 
 import { Request } from 'express';
 import { ProviderType } from '../rates/provider.entity';
@@ -243,6 +244,70 @@ export class AdminController {
       req.ip || req.headers?.['x-forwarded-for'],
     );
     return { success: result.success, data: result };
+  }
+
+  // =========================================================================
+  // Currency Management
+  // =========================================================================
+
+  @Get('currencies')
+  async listCurrencies() {
+    const currencies = await this.adminService.getAllCurrencies();
+    return { success: true, data: currencies };
+  }
+
+  @Post('currencies')
+  async createCurrency(
+    @Req() req: RequestWithIp,
+    @Body() body: CreateCurrencyDto,
+  ) {
+    const adminId = (req as any).user?.id;
+    const currency = await this.adminService.createCurrency(
+      body,
+      adminId,
+      req.ip || req.headers?.['x-forwarded-for'],
+    );
+    return { success: true, data: currency };
+  }
+
+  @Put('currencies/:code')
+  async updateCurrency(
+    @Req() req: RequestWithIp,
+    @Param('code') code: string,
+    @Body() body: UpdateCurrencyDto,
+  ) {
+    const adminId = (req as any).user?.id;
+    const currency = await this.adminService.updateCurrency(
+      code,
+      body,
+      adminId,
+      req.ip || req.headers?.['x-forwarded-for'],
+    );
+    return { success: true, data: currency };
+  }
+
+  @Delete('currencies/:code')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteCurrency(
+    @Req() req: RequestWithIp,
+    @Param('code') code: string,
+  ) {
+    const adminId = (req as any).user?.id;
+    await this.adminService.deleteCurrency(
+      code,
+      adminId,
+      req.ip || req.headers?.['x-forwarded-for'],
+    );
+  }
+
+  @Post('currencies/seed')
+  async seedCurrencies(@Req() req: RequestWithIp) {
+    const adminId = (req as any).user?.id;
+    const result = await this.adminService.seedCurrencies(
+      adminId,
+      req.ip || req.headers?.['x-forwarded-for'],
+    );
+    return { success: true, data: result, message: `${result.added} currencies added, ${result.skipped} skipped` };
   }
 
   // =========================================================================
