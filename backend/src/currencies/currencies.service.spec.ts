@@ -172,4 +172,90 @@ describe('CurrenciesService', () => {
         .rejects.toThrow(BadRequestException);
     });
   });
+
+  describe('seedDefaultCurrencies', () => {
+    it('should create missing currencies and update existing ones', async () => {
+      jest.spyOn(service, 'findByCode')
+        .mockRejectedValueOnce(new NotFoundException('USD not found')) // USD doesn't exist
+        .mockResolvedValueOnce({ code: 'EUR', name: 'Old Euro', symbol: '€', decimal_places: 2 } as Currency) // EUR exists with old name
+        .mockResolvedValueOnce({ code: 'GBP', name: 'British Pound', symbol: '£', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'JPY', name: 'Japanese Yen', symbol: '¥', decimal_places: 0 } as Currency)
+        .mockResolvedValueOnce({ code: 'CNY', name: 'Chinese Yuan', symbol: '¥', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'TWD', name: 'Taiwan Dollar', symbol: 'NT$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'KRW', name: 'South Korean Won', symbol: '₩', decimal_places: 0 } as Currency)
+        .mockResolvedValueOnce({ code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'AUD', name: 'Australian Dollar', symbol: 'A$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'CHF', name: 'Swiss Franc', symbol: 'Fr', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'BTC', name: 'Bitcoin', symbol: '₿', decimal_places: 8 } as Currency)
+        .mockResolvedValueOnce({ code: 'ETH', name: 'Ethereum', symbol: 'Ξ', decimal_places: 18 } as Currency);
+
+      jest.spyOn(service, 'create').mockResolvedValue({} as Currency);
+      jest.spyOn(service, 'update').mockResolvedValue({} as Currency);
+
+      const result = await service.seedDefaultCurrencies();
+
+      expect(service.create).toHaveBeenCalledTimes(1); // USD created
+      expect(service.update).toHaveBeenCalledTimes(1); // EUR updated (has old name)
+      expect(result.added).toBe(1);
+      expect(result.skipped).toBe(13);
+    });
+
+    it('should not duplicate currencies that already exist with correct data', async () => {
+      jest.spyOn(service, 'findByCode')
+        .mockResolvedValueOnce({ code: 'USD', name: 'US Dollar', symbol: '$', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'EUR', name: 'Euro', symbol: '€', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'GBP', name: 'British Pound', symbol: '£', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'JPY', name: 'Japanese Yen', symbol: '¥', decimal_places: 0, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'CNY', name: 'Chinese Yuan', symbol: '¥', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'TWD', name: 'Taiwan Dollar', symbol: 'NT$', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'KRW', name: 'South Korean Won', symbol: '₩', decimal_places: 0, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'AUD', name: 'Australian Dollar', symbol: 'A$', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'CHF', name: 'Swiss Franc', symbol: 'Fr', decimal_places: 2, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'BTC', name: 'Bitcoin', symbol: '₿', decimal_places: 8, is_active: true } as Currency)
+        .mockResolvedValueOnce({ code: 'ETH', name: 'Ethereum', symbol: 'Ξ', decimal_places: 18, is_active: true } as Currency);
+
+      jest.spyOn(service, 'create').mockResolvedValue({} as Currency);
+      jest.spyOn(service, 'update').mockResolvedValue({} as Currency);
+
+      const result = await service.seedDefaultCurrencies();
+
+      expect(service.create).not.toHaveBeenCalled();
+      expect(service.update).not.toHaveBeenCalled();
+      expect(result.added).toBe(0);
+      expect(result.skipped).toBe(14);
+    });
+
+    it('should update currencies that exist but have incorrect data', async () => {
+      jest.spyOn(service, 'findByCode')
+        .mockResolvedValueOnce({ code: 'USD', name: 'Old USD', symbol: '$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'EUR', name: 'Euro', symbol: '€', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'GBP', name: 'British Pound', symbol: '£', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'JPY', name: 'Japanese Yen', symbol: '¥', decimal_places: 0 } as Currency)
+        .mockResolvedValueOnce({ code: 'CNY', name: 'Chinese Yuan', symbol: '¥', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'TWD', name: 'Taiwan Dollar', symbol: 'NT$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'KRW', name: 'South Korean Won', symbol: '₩', decimal_places: 0 } as Currency)
+        .mockResolvedValueOnce({ code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'AUD', name: 'Australian Dollar', symbol: 'A$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'CHF', name: 'Swiss Franc', symbol: 'Fr', decimal_places: 2 } as Currency)
+        .mockResolvedValueOnce({ code: 'BTC', name: 'Bitcoin', symbol: '₿', decimal_places: 8 } as Currency)
+        .mockResolvedValueOnce({ code: 'ETH', name: 'Ethereum', symbol: 'Ξ', decimal_places: 18 } as Currency);
+
+      jest.spyOn(service, 'create').mockResolvedValue({} as Currency);
+      jest.spyOn(service, 'update').mockResolvedValue({} as Currency);
+
+      const result = await service.seedDefaultCurrencies();
+
+      expect(service.update).toHaveBeenCalledTimes(1); // USD updated
+      expect(service.create).not.toHaveBeenCalled();
+      expect(result.added).toBe(0);
+      expect(result.skipped).toBe(14);
+    });
+  });
 });

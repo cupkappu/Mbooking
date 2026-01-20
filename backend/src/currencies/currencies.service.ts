@@ -75,7 +75,7 @@ export class CurrenciesService {
     return this.findByCode(code);
   }
 
-  async seedDefaultCurrencies(): Promise<void> {
+  async seedDefaultCurrencies(): Promise<{ added: number; skipped: number }> {
     const defaultCurrencies = [
       { code: 'USD', name: 'US Dollar', symbol: '$', decimal_places: 2 },
       { code: 'EUR', name: 'Euro', symbol: '€', decimal_places: 2 },
@@ -93,12 +93,39 @@ export class CurrenciesService {
       { code: 'ETH', name: 'Ethereum', symbol: 'Ξ', decimal_places: 18 },
     ];
 
+    let added = 0;
+    let skipped = 0;
+
     for (const currency of defaultCurrencies) {
-      const existing = await this.findByCode(currency.code).catch(() => null);
-      if (!existing) {
-        await this.create(currency);
+      try {
+        const existing = await this.findByCode(currency.code);
+
+        const needsUpdate =
+          existing.name !== currency.name ||
+          (existing.symbol || '') !== (currency.symbol || '') ||
+          existing.decimal_places !== currency.decimal_places;
+
+        if (needsUpdate) {
+          await this.update(currency.code, {
+            name: currency.name,
+            symbol: currency.symbol,
+            decimal_places: currency.decimal_places,
+          });
+          skipped++;
+        } else {
+          skipped++;
+        }
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          await this.create(currency);
+          added++;
+        } else {
+          throw error;
+        }
       }
     }
+
+    return { added, skipped };
   }
 
   async validateCurrencyExists(code: string): Promise<Currency> {
