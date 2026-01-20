@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  DollarSign,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,6 +25,7 @@ import { SessionProvider } from '@/providers/session-provider';
 
 const adminNavItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/currencies', label: 'Currencies', icon: DollarSign },
   { href: '/admin/system', label: 'Settings', icon: Settings },
   { href: '/admin/providers', label: 'Providers', icon: Server },
   { href: '/admin/logs', label: 'Audit Logs', icon: FileText },

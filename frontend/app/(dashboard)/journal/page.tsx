@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useJournalEntries, useAccounts, useCreateJournalEntry, useDeleteJournalEntry } from '@/hooks/use-api';
+import { useCurrencies } from '@/hooks/use-currencies';
 import type { JournalEntry, Account } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ import {
 export default function JournalPage() {
   const { data: journalData, isLoading, refetch } = useJournalEntries();
   const { data: accounts } = useAccounts();
+  const { data: currencies } = useCurrencies();
   const createEntry = useCreateJournalEntry();
   const deleteEntry = useDeleteJournalEntry();
 
@@ -207,14 +209,22 @@ export default function JournalPage() {
                       className="w-32"
                       required
                     />
-                    
-                    <Input
-                      type="text"
+
+                    <Select
                       value={line.currency}
-                      onChange={(e) => updateLine(index, 'currency', e.target.value.toUpperCase())}
-                      className="w-20"
-                      maxLength={3}
-                    />
+                      onValueChange={(value) => updateLine(index, 'currency', value)}
+                    >
+                      <SelectTrigger className="w-28">
+                        <SelectValue placeholder="Currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currencies?.map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     
                     {formData.lines.length > 2 && (
                       <Button

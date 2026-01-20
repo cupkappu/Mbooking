@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useAccounts, useCreateAccount, useDeleteAccount, useUpdateAccount, useBalances } from '@/hooks/use-api';
+import { useCurrencies } from '@/hooks/use-currencies';
 import type { Account } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +72,7 @@ export default function AccountsPage() {
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
+  const { data: currencies } = useCurrencies();
 
   const accountTypes = ['assets', 'liabilities', 'equity', 'revenue', 'expense'];
 
@@ -511,12 +513,21 @@ export default function AccountsPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Currency</label>
-                <Input
+                <Select
                   value={formData.currency}
-                  onChange={(e) => setFormData({ ...formData, currency: e.target.value.toUpperCase() })}
-                  placeholder="USD"
-                  maxLength={3}
-                />
+                  onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies?.map((currency) => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.code} - {currency.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
