@@ -182,6 +182,7 @@ describe('AuthService', () => {
 
 import { AccountsService } from './accounts/accounts.service';
 import { Account, AccountType } from './accounts/account.entity';
+import { CurrenciesService } from './currencies/currencies.service';
 
 describe('AccountsService', () => {
   let service: AccountsService;
@@ -227,6 +228,12 @@ describe('AccountsService', () => {
             manager: {
               save: jest.fn((account) => Promise.resolve(account)),
             },
+          },
+        },
+        {
+          provide: CurrenciesService,
+          useValue: {
+            validateCurrencyExists: jest.fn().mockResolvedValue({ code: 'USD' }),
           },
         },
       ],
@@ -405,6 +412,12 @@ describe('JournalService', () => {
           provide: QueryService,
           useValue: {
             invalidateCache: jest.fn(),
+          },
+        },
+        {
+          provide: CurrenciesService,
+          useValue: {
+            validateCurrencyExists: jest.fn().mockResolvedValue({ code: 'USD' }),
           },
         },
       ],
