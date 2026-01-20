@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { NotFoundException } from '@nestjs/common';
 import { CurrenciesController } from './currencies.controller';
 import { CurrenciesService } from './currencies.service';
 import { Currency } from './currency.entity';
@@ -10,17 +10,6 @@ describe('CurrenciesController', () => {
   let controller: CurrenciesController;
   let service: CurrenciesService;
 
-  const mockCurrency: Currency = {
-    code: 'USD',
-    name: 'US Dollar',
-    symbol: '$',
-    decimal_places: 2,
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date(),
-    deleted_at: null,
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CurrenciesController],
@@ -28,19 +17,11 @@ describe('CurrenciesController', () => {
         CurrenciesService,
         {
           provide: getRepositoryToken(Currency),
-          useValue: {
-            find: jest.fn(),
-            findOne: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
-          },
+          useValue: {},
         },
         {
           provide: TenantsService,
-          useValue: {
-            findById: jest.fn(),
-            update: jest.fn(),
-          },
+          useValue: {},
         },
       ],
     }).compile();
@@ -66,33 +47,41 @@ describe('CurrenciesController', () => {
 
   describe('findOne', () => {
     it('should return currency by code', async () => {
-      const mockCurrency = { code: 'USD', name: 'US Dollar', symbol: '$', decimal_places: 2, is_active: true };
-      jest.spyOn(service, 'findByCode').mockResolvedValue(mockCurrency as any);
+      const mockCurrencyResult = { code: 'USD', name: 'US Dollar', symbol: '$', decimal_places: 2, is_active: true };
+      jest.spyOn(service, 'findByCode').mockResolvedValue(mockCurrencyResult as any);
 
       const result = await controller.findOne('USD');
 
-      expect(result).toEqual(mockCurrency);
+      expect(result).toEqual(mockCurrencyResult);
       expect(service.findByCode).toHaveBeenCalledWith('USD');
+    });
+
+    it('should throw NotFoundException for non-existent currency', async () => {
+      jest.spyOn(service, 'findByCode').mockRejectedValue(new NotFoundException('Currency with code XYZ not found'));
+
+      await expect(controller.findOne('XYZ')).rejects.toThrow(NotFoundException);
     });
   });
 
-  it('should NOT have create method', () => {
-    expect((controller as any).create).toBeUndefined();
-  });
+  describe('should NOT have methods', () => {
+    it('should NOT have create method', () => {
+      expect((controller as any).create).toBeUndefined();
+    });
 
-  it('should NOT have update method', () => {
-    expect((controller as any).update).toBeUndefined();
-  });
+    it('should NOT have update method', () => {
+      expect((controller as any).update).toBeUndefined();
+    });
 
-  it('should NOT have delete method', () => {
-    expect((controller as any).delete).toBeUndefined();
-  });
+    it('should NOT have delete method', () => {
+      expect((controller as any).delete).toBeUndefined();
+    });
 
-  it('should NOT have setDefault method', () => {
-    expect((controller as any).setDefault).toBeUndefined();
-  });
+    it('should NOT have setDefault method', () => {
+      expect((controller as any).setDefault).toBeUndefined();
+    });
 
-  it('should NOT have seed method', () => {
-    expect((controller as any).seed).toBeUndefined();
+    it('should NOT have seed method', () => {
+      expect((controller as any).seed).toBeUndefined();
+    });
   });
 });
