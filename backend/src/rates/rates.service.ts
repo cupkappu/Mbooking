@@ -1,16 +1,59 @@
 import { Injectable } from '@nestjs/common';
-import { RateEngine } from './rate.engine';
+import { RateGraphEngine, GraphPathfindingResult } from './rate-graph-engine';
 
 @Injectable()
 export class RatesService {
-  constructor(private rateEngine: RateEngine) {}
+  constructor(private rateGraphEngine: RateGraphEngine) {}
 
   async getLatestRate(from: string, to: string): Promise<any> {
-    return this.rateEngine.getRate(from, to);
+    const result = await this.rateGraphEngine.getRate(from, to);
+    
+    if (!result) {
+      return null;
+    }
+    
+    return {
+      from: result.from,
+      to: result.to,
+      rate: result.rate,
+      timestamp: result.timestamp,
+      source: result.source,
+      path: result.path,
+      hops: result.hops,
+      isInferred: result.isInferred,
+    };
   }
 
   async getRateAtDate(from: string, to: string, date: Date): Promise<any> {
-    return this.rateEngine.getRate(from, to, { date });
+    const result = await this.rateGraphEngine.getRate(from, to, { date });
+    
+    if (!result) {
+      return null;
+    }
+    
+    return {
+      from: result.from,
+      to: result.to,
+      rate: result.rate,
+      timestamp: result.timestamp,
+      source: result.source,
+      path: result.path,
+      hops: result.hops,
+      isInferred: result.isInferred,
+    };
+  }
+
+  async convert(amount: number, from: string, to: string, date?: Date): Promise<any> {
+    return this.rateGraphEngine.convert(amount, from, to, date);
+  }
+
+  async getAvailablePaths(from: string, to: string, date?: Date): Promise<any[]> {
+    const paths = await this.rateGraphEngine.getAvailablePaths(from, to, date);
+    return paths.map(p => ({
+      path: p.path,
+      totalRate: p.totalRate,
+      hops: p.hops,
+    }));
   }
 
   async getRateHistory(
@@ -32,7 +75,7 @@ export class RatesService {
     }>;
     total: number;
   }> {
-    return this.rateEngine.getRateHistory(from, to, options);
+    return this.rateGraphEngine.getRateHistory(from, to, options);
   }
 
   async getRateTrend(from: string, to: string, days: number = 30): Promise<{
@@ -43,14 +86,22 @@ export class RatesService {
     change_percent: number;
     history: Array<{ date: string; rate: number }>;
   }> {
-    return this.rateEngine.getRateTrend(from, to, days);
+    return this.rateGraphEngine.getRateTrend(from, to, days);
   }
 
-  async convert(amount: number, from: string, to: string, date?: Date): Promise<any> {
-    return this.rateEngine.convert(amount, from, to, date);
-  }
-
-  async getCrossRate(from: string, to: string, via?: string[]): Promise<number> {
-    return this.rateEngine.getCrossRate(from, to, via);
+  async getAverageRate(
+    from: string,
+    to: string,
+    options: {
+      fromDate: Date;
+      toDate: Date;
+    },
+  ): Promise<{
+    average_rate: number;
+    min_rate: number;
+    max_rate: number;
+    sample_count: number;
+  }> {
+    return this.rateGraphEngine.getAverageRate(from, to, options);
   }
 }

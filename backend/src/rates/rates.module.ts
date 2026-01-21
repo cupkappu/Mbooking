@@ -5,11 +5,12 @@ import { Provider } from './provider.entity';
 import { RatesService } from './rates.service';
 import { RatesController } from './rates.controller';
 import { RateEngine } from './rate.engine';
+import { RateGraphEngine } from './rate-graph-engine';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ExchangeRate, Provider])],
   controllers: [RatesController],
-  providers: [RatesService, RateEngine],
-  exports: [RatesService, RateEngine],
+  providers: [RatesService, RateGraphEngine, RateEngine],
+  exports: [RatesService, RateGraphEngine, RateEngine],
 })
 export class RatesModule {}

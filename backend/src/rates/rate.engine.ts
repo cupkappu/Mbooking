@@ -277,16 +277,68 @@ export class RateEngine {
       const pluginPath = provider.config.file_path;
       if (!pluginPath) return null;
 
-      const module = require(pluginPath);
+      // Use absolute path - backend directory is where the dist folder is
+      const backendDir = __dirname.replace('/dist/rates', '');
+      const absolutePath = backendDir + '/' + pluginPath;
+      const module = require(absolutePath);
       const plugin = module.default || module;
 
-      const result = date
-        ? await plugin.getRateAtDate(from, to, date)
-        : await plugin.getLatestRate(from, to);
-
-      return result;
+      // Try getLatestRate first
+      try {
+        const result = date
+          ? await plugin.getRateAtDate(from, to, date)
+          : await plugin.getLatestRate(from, to);
+        return result;
+      } catch (rateError) {
+        // If getLatestRate fails, try fetchRates for crypto-to-fiat pairs
+        if (!date && plugin.fetchRates) {
+          // fetchRates can get rates using a fiat currency as base
+          // Try to get the rate with the target currency as base, then invert
+          // e.g., for BTC/USD: fetchRates(['BTC'], 'USD') returns { 'USD/BTC': 0.000011 }
+          // which means 1 USD = 0.000011 BTC, so BTC/USD = 1/0.000011
+          const cryptoCurrencies = [from, to].filter(c => 
+            plugin.supported_currencies?.includes?.(c)
+          );
+          
+          if (cryptoCurrencies.length > 0) {
+            // Try with the target currency as base (for crypto-to-fiat)
+            const rates = await plugin.fetchRates(cryptoCurrencies, to);
+            
+            // Check if we got the inverted rate (base/crypto format)
+            // e.g., 'USD/BTC' -> invert to get BTC/USD
+            for (const crypto of cryptoCurrencies) {
+              const invertedKey = `${to}/${crypto}`;
+              if (rates[invertedKey]) {
+                return {
+                  from: crypto,
+                  to,
+                  rate: 1 / rates[invertedKey],
+                  timestamp: new Date(),
+                  source: provider.name,
+                };
+              }
+            }
+            
+            // Also check direct rate (crypto/base format)
+            // e.g., 'BTC/USD' directly
+            for (const crypto of cryptoCurrencies) {
+              const rateKey = `${crypto}/${to}`;
+              if (rates[rateKey]) {
+                return {
+                  from: crypto,
+                  to,
+                  rate: rates[rateKey],
+                  timestamp: new Date(),
+                  source: provider.name,
+                };
+              }
+            }
+          }
+        }
+        throw rateError;
+      }
     } catch (error) {
-      this.logger.error(`Failed to execute JS plugin ${provider.name}: ${error.message}`);
+      this.logger.warn(`Provider ${provider.name} failed: ${error.message}`);
       return null;
     }
   }

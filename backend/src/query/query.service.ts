@@ -4,7 +4,7 @@ import { Repository, Between, In, Like } from 'typeorm';
 import { Account, AccountType } from '../accounts/account.entity';
 import { JournalEntry } from '../journal/journal-entry.entity';
 import { JournalLine } from '../journal/journal-line.entity';
-import { RateEngine } from '../rates/rate.engine';
+import { RateGraphEngine } from '../rates/rate-graph-engine';
 import { TenantContext } from '../common/context/tenant.context';
 import { TenantsService } from '../tenants/tenants.service';
 
@@ -85,7 +85,7 @@ export class QueryService {
     private journalEntryRepository: Repository<JournalEntry>,
     @InjectRepository(JournalLine)
     private journalLineRepository: Repository<JournalLine>,
-    private rateEngine: RateEngine,
+    private rateGraphEngine: RateGraphEngine,
     private tenantsService: TenantsService,
   ) {}
 
@@ -152,7 +152,7 @@ export class QueryService {
                   totalConverted += balance.amount;
                 } else {
                   // Get rate from original currency to target currency
-                  const rate = await this.rateEngine.getRate(
+                  const rate = await this.rateGraphEngine.getRate(
                     balance.currency,
                     query.convert_to,
                     { date: query.specific_date ? new Date(query.specific_date) : undefined }
@@ -189,7 +189,7 @@ export class QueryService {
           if (balance.currency === defaultCurrency) {
             convertedTotal += balance.amount;
           } else {
-            const rate = await this.rateEngine.getRate(balance.currency, defaultCurrency, {
+            const rate = await this.rateGraphEngine.getRate(balance.currency, defaultCurrency, {
               date: query.specific_date ? new Date(query.specific_date) : undefined,
             });
             if (rate) {
@@ -309,7 +309,7 @@ export class QueryService {
         convertedLiabilities += liabilities;
         netWorth += balance;
       } else {
-        const rate = await this.rateEngine.getRate(currency, defaultCurrency, {});
+        const rate = await this.rateGraphEngine.getRate(currency, defaultCurrency, {});
         if (rate) {
           convertedAssets += assets * rate.rate;
           convertedLiabilities += liabilities * rate.rate;
@@ -332,7 +332,7 @@ export class QueryService {
       for (const line of entry.lines) {
         if (line.amount > 0) {
           // Calculate converted amount on the fly
-          const rate = await this.rateEngine.getRate(line.currency, defaultCurrency, {});
+          const rate = await this.rateGraphEngine.getRate(line.currency, defaultCurrency, {});
           if (rate) {
             netAmount += line.amount * rate.rate;
           } else {
@@ -433,7 +433,7 @@ export class QueryService {
       }
 
       const date = specificDate ? new Date(specificDate) : undefined;
-      const rate = await this.rateEngine.getRate(balance.currency, targetCurrency, { date });
+      const rate = await this.rateGraphEngine.getRate(balance.currency, targetCurrency, { date });
 
       if (rate) {
         converted.push({

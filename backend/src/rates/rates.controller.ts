@@ -86,4 +86,26 @@ export class RatesController {
     
     return result;
   }
+
+  @Get('paths')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all available conversion paths between currencies' })
+  async getAvailablePaths(
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    if (!from || !to) {
+      throw new NotFoundException('Both "from" and "to" currency codes are required');
+    }
+    
+    const paths = await this.ratesService.getAvailablePaths(from, to);
+    
+    return {
+      from: from.toUpperCase(),
+      to: to.toUpperCase(),
+      paths,
+      totalPaths: paths.length,
+    };
+  }
 }

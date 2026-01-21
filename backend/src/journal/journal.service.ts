@@ -6,7 +6,7 @@ import { JournalLine } from './journal-line.entity';
 import { QueryService } from '../query/query.service';
 import { TenantContext } from '../common/context/tenant.context';
 import { CurrenciesService } from '../currencies/currencies.service';
-import { RateEngine } from '../rates/rate.engine';
+import { RateGraphEngine } from '../rates/rate-graph-engine';
 import { TenantsService } from '../tenants/tenants.service';
 
 export type JournalLineWithConverted = JournalLine & {
@@ -28,7 +28,7 @@ export class JournalService {
     @Inject(forwardRef(() => QueryService))
     private queryService: QueryService,
     private currenciesService: CurrenciesService,
-    private rateEngine: RateEngine,
+    private rateGraphEngine: RateGraphEngine,
     private tenantsService: TenantsService,
   ) {}
 
@@ -60,7 +60,7 @@ export class JournalService {
       return { exchange_rate: 1, converted_amount: amount };
     }
 
-    const rate = await this.rateEngine.getRate(currency, defaultCurrency, { date });
+    const rate = await this.rateGraphEngine.getRate(currency, defaultCurrency, { date });
     if (rate) {
       return {
         exchange_rate: rate.rate,
@@ -69,7 +69,7 @@ export class JournalService {
     }
     
     // Fallback to latest rate if historical rate not available
-    const latestRate = await this.rateEngine.getRate(currency, defaultCurrency);
+    const latestRate = await this.rateGraphEngine.getRate(currency, defaultCurrency);
     if (latestRate) {
       return {
         exchange_rate: latestRate.rate,
