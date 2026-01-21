@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { RatesService } from './rates.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -16,7 +16,20 @@ export class RatesController {
     @Query('from') from: string,
     @Query('to') to: string,
   ) {
-    return this.ratesService.getLatestRate(from, to);
+    if (!from || !to) {
+      throw new NotFoundException('Both "from" and "to" currency codes are required');
+    }
+    
+    const rate = await this.ratesService.getLatestRate(from, to);
+    
+    if (!rate) {
+      throw new NotFoundException(
+        `Exchange rate not available for ${from.toUpperCase()}/${to.toUpperCase()}. ` +
+        'Please configure a rate provider in Admin > Providers.'
+      );
+    }
+    
+    return rate;
   }
 
   @Get('history')
@@ -58,6 +71,19 @@ export class RatesController {
     @Query('from') from: string,
     @Query('to') to: string,
   ) {
-    return this.ratesService.convert(amount, from, to);
+    if (!from || !to) {
+      throw new NotFoundException('Both "from" and "to" currency codes are required');
+    }
+    
+    const result = await this.ratesService.convert(amount, from, to);
+    
+    if (!result) {
+      throw new NotFoundException(
+        `Exchange rate not available for ${from.toUpperCase()}/${to.toUpperCase()}. ` +
+        'Please configure a rate provider in Admin > Providers.'
+      );
+    }
+    
+    return result;
   }
 }
