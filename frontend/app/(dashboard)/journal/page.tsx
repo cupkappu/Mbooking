@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useJournalEntries, useAccounts, useCreateJournalEntry, useUpdateJournalEntry, useDeleteJournalEntry } from '@/hooks/use-api';
 import { useCurrencies } from '@/hooks/use-currencies';
-import { setCurrenciesCache, formatCurrencyWithSign } from '@/lib/currency-formatter';
+import { setCurrenciesCache, formatCurrency, formatCurrencyWithSign } from '@/lib/currency-formatter';
 import type { JournalEntry, Account } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -366,13 +366,20 @@ export default function JournalPage() {
                       <span className="text-muted-foreground">
                         {getAccountName(line.account_id)}
                       </span>
-                      <span className={
-                        parseFloat(String(line.amount)) < 0 
-                          ? 'text-red-600 font-medium' 
-                          : 'text-green-600 font-medium'
-                      }>
-                        {formatCurrencyWithSign(parseFloat(String(line.amount)), line.currency || 'USD')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={
+                          parseFloat(String(line.amount)) < 0 
+                            ? 'text-red-600 font-medium' 
+                            : 'text-green-600 font-medium'
+                        }>
+                          {formatCurrencyWithSign(parseFloat(String(line.amount)), line.currency || 'USD')}
+                        </span>
+                        {line.converted_amount !== undefined && line.converted_amount !== null && line.currency !== 'USD' && (
+                          <span className="text-xs text-muted-foreground">
+                            = {formatCurrency(line.converted_amount)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
