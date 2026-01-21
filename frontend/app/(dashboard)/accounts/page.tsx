@@ -24,8 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { currenciesApi } from '@/lib/currencies';
 import type { Currency } from '@/types/currency';
-import { BalanceCell } from '@/components/accounts/BalanceCell';
-import { TotalCell } from '@/components/accounts/TotalCell';
+import { BalanceDisplay } from '@/components/accounts/BalanceDisplay';
 import type { CurrencyBalance, AccountBalance } from '@/types';
 import { formatCurrency, setCurrenciesCache } from '@/lib/currency-formatter';
 
@@ -306,16 +305,17 @@ export default function AccountsPage() {
             </div>
 
             <div className="w-36 text-right shrink-0">
-              <BalanceCell
+              <BalanceDisplay
                 currencies={balance?.currencies || []}
+                convertedTotal={balance?.converted_amount}
                 displayCurrency={displayCurrency}
               />
             </div>
             
             <div className="w-36 text-right shrink-0">
-              <TotalCell
-                subtreeCurrencies={balance?.subtree_currencies}
-                convertedSubtreeTotal={balance?.converted_subtree_total}
+              <BalanceDisplay
+                currencies={balance?.subtree_currencies || []}
+                convertedTotal={balance?.converted_subtree_total}
                 displayCurrency={displayCurrency}
               />
             </div>
