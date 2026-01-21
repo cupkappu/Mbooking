@@ -136,19 +136,19 @@ export default function DashboardPage() {
         <SummaryCard
           label="Total Assets"
           amounts={summary?.assets}
-          convertedAmount={undefined}
+          convertedAmount={summary?.converted_assets ?? undefined}
           isLoading={isLoading}
         />
         <SummaryCard
           label="Total Liabilities"
           amounts={summary?.liabilities}
-          convertedAmount={undefined}
+          convertedAmount={summary?.converted_liabilities ?? undefined}
           isLoading={isLoading}
         />
         <SummaryCard
-          label="Net Worth (USD)"
+          label="Net Worth"
           amounts={undefined}
-          convertedAmount={summary?.netWorth}
+          convertedAmount={summary?.netWorth ?? undefined}
           isLoading={isLoading}
         />
       </div>
