@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,8 +26,7 @@ const setupSchema = z.object({
 type SetupFormData = z.infer<typeof setupSchema>;
 
 export function SetupForm() {
-  const router = useRouter();
-  const { isLoading, error, initialize, redirectToDashboard, checkStatus } = useSetup();
+  const { isInitializing, initializeError, initialize } = useSetup();
   const [initSecret, setInitSecret] = useState('');
   const [secretError, setSecretError] = useState<string | null>(null);
 
@@ -45,7 +43,7 @@ export function SetupForm() {
 
   const { register, handleSubmit, formState: { errors, isValid } } = form;
 
-  // Check if we have INIT_SECRET
+  // Load INIT_SECRET from localStorage
   useEffect(() => {
     const secret = localStorage.getItem('initSecret');
     if (secret) {
@@ -59,15 +57,8 @@ export function SetupForm() {
       return;
     }
 
-    try {
-      await initialize(data, initSecret);
-      // Store the credentials for potential auto-login
-      localStorage.setItem('initSecret', initSecret);
-      // Redirect to dashboard on success
-      redirectToDashboard();
-    } catch {
-      // Error is handled by the hook
-    }
+    await initialize({ data, initSecret });
+    localStorage.setItem('initSecret', initSecret);
   };
 
   const passwordValue = form.watch('password');
@@ -99,7 +90,7 @@ export function SetupForm() {
                 setSecretError(null);
               }}
               placeholder="Enter INIT_SECRET from environment"
-              disabled={isLoading}
+              disabled={isInitializing}
             />
             {secretError && (
               <p className="text-sm text-red-500">{secretError}</p>
@@ -114,7 +105,7 @@ export function SetupForm() {
               type="email"
               {...register('email')}
               placeholder="admin@example.com"
-              disabled={isLoading}
+              disabled={isInitializing}
             />
             {errors.email && (
               <p className="text-sm text-red-500">{errors.email.message}</p>
@@ -129,7 +120,7 @@ export function SetupForm() {
               type="text"
               {...register('name')}
               placeholder="Administrator"
-              disabled={isLoading}
+              disabled={isInitializing}
             />
             {errors.name && (
               <p className="text-sm text-red-500">{errors.name.message}</p>
@@ -144,7 +135,7 @@ export function SetupForm() {
               type="password"
               {...register('password')}
               placeholder="Enter a strong password"
-              disabled={isLoading}
+              disabled={isInitializing}
             />
             {errors.password && (
               <p className="text-sm text-red-500">{errors.password.message}</p>
@@ -180,14 +171,14 @@ export function SetupForm() {
               type="text"
               {...register('organizationName')}
               placeholder="My Company"
-              disabled={isLoading}
+              disabled={isInitializing}
             />
           </div>
 
           {/* Error Message */}
-          {error && (
+          {initializeError && (
             <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md">
-              {error}
+              {initializeError}
             </div>
           )}
 
@@ -195,9 +186,9 @@ export function SetupForm() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !isValid || !initSecret}
+            disabled={isInitializing || !isValid || !initSecret}
           >
-            {isLoading ? 'Initializing...' : 'Initialize System'}
+            {isInitializing ? 'Initializing...' : 'Initialize System'}
           </Button>
         </form>
       </CardContent>

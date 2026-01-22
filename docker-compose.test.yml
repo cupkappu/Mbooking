@@ -44,7 +44,7 @@ services:
       NEXTAUTH_SECRET: test-nextauth-secret-for-testing-only-do-not-use-in-production
       NEXTAUTH_URL: http://localhost:8068
       NEXT_PUBLIC_API_URL: http://localhost:8067
-
+      INIT_SECRET: ${INIT_SECRET:-test-init-secret}
       # Environment
       NODE_ENV: test
       LOG_LEVEL: debug
@@ -53,14 +53,6 @@ services:
     depends_on:
       postgres_test:
         condition: service_healthy
-    # Run migrations then start the server
-    command: >
-      sh -c "
-        echo 'Running database migrations...' &&
-        npm run migration:run &&
-        echo 'Starting backend server...' &&
-        npm run start:prod
-      "
     restart: unless-stopped
 
   # Frontend service - test configuration
@@ -75,16 +67,7 @@ services:
     ports:
       - "8068:3000"
     depends_on:
-      backend_test:
-        condition: service_healthy
-    # Wait for backend to be ready before starting
-    command: >
-      sh -c "
-        echo 'Waiting for backend to be ready...' &&
-        sleep 10 &&
-        echo 'Starting frontend server...' &&
-        npm run start:prod
-      "
+      - backend_test    # Wait for backend to be ready before starting
     restart: unless-stopped
 
 # No named volumes - uses tmpfs for postgres_test service

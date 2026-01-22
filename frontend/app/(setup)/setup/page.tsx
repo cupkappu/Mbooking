@@ -1,36 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { SetupForm } from './setup-form';
 import { useSetup } from '@/hooks/use-setup';
 
 export default function SetupPage() {
-  const router = useRouter();
-  const { checkStatus, redirectToLogin } = useSetup();
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  const { status, isLoading, redirectToLogin } = useSetup();
 
-  useEffect(() => {
-    async function checkInitialization() {
-      try {
-        const status = await checkStatus();
-        if (status.initialized) {
-          // System already initialized, redirect to login
-          redirectToLogin();
-        }
-      } catch {
-        // If we can't check status, show the setup page
-        // This might happen if the backend is not running yet
-      } finally {
-        setIsChecking(false);
-      }
-    }
+  // Redirect to login if system is already initialized
+  if (status?.initialized && !isLoading) {
+    redirectToLogin();
+    return null;
+  }
 
-    checkInitialization();
-  }, [checkStatus, redirectToLogin]);
-
-  if (isChecking) {
+  // Show loading state while checking status
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -41,6 +24,7 @@ export default function SetupPage() {
     );
   }
 
+  // Show setup form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <SetupForm />
