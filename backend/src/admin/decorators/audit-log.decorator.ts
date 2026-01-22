@@ -6,8 +6,8 @@ export interface AuditLogOptions {
   action: AdminAction;
   entityType: string;
   getEntityId?: (args: any[], result: any) => string | undefined;
-  getOldValue?: (args: any[], result: any) => any;
-  getNewValue?: (args: any[], result: any) => any;
+  getOldValue?: (args: any[], result: any, instance?: any) => any;
+  getNewValue?: (args: any[], result: any, instance?: any) => any;
   extractIpFromArgs?: boolean;
   extractUserAgentFromArgs?: boolean;
   extractAdminIdFromArgs?: boolean;
@@ -74,8 +74,8 @@ export function AuditLog(options: AuditLogOptions) {
         entityId: options.getEntityId?.(args, result),
         userId: adminId,
         tenantId,
-        oldValue: options.getOldValue?.(args, result),
-        newValue: options.getNewValue?.(args, result),
+        oldValue: options.getOldValue?.(args, result, instance),
+        newValue: options.getNewValue?.(args, result, instance),
         ipAddress,
         userAgent,
       };
