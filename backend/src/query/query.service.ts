@@ -52,6 +52,16 @@ export interface AccountBalance {
   converted_subtree_currency?: string;
 }
 
+export interface JournalLineData {
+  id: string;
+  account_id: string;
+  amount: number;
+  currency: string;
+  exchange_rate?: number;
+  converted_amount?: number;
+  tags: string[];
+}
+
 export interface DashboardSummary {
   /** 按货币分别显示的资产余额，如 "1000 HKD + 50 USD" */
   assets: { [currency: string]: number };
@@ -69,6 +79,7 @@ export interface DashboardSummary {
     description: string;
     amount: number;
     currency: string;
+    lines?: JournalLineData[];
   }[];
 }
 
@@ -348,6 +359,15 @@ export class QueryService {
         description: entry.description,
         amount: Math.round(netAmount * 100) / 100,
         currency: primaryCurrency,
+        lines: entry.lines.map((line: any) => ({
+          id: line.id,
+          account_id: line.account_id,
+          amount: line.amount,
+          currency: line.currency,
+          exchange_rate: line.exchange_rate,
+          converted_amount: line.converted_amount,
+          tags: line.tags || [],
+        })),
       };
     }));
 

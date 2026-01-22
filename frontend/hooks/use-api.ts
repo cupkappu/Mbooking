@@ -131,6 +131,16 @@ export function useBalances(query: {
   });
 }
 
+export interface JournalLine {
+  id: string;
+  account_id: string;
+  amount: number;
+  currency: string;
+  exchange_rate?: number;
+  converted_amount?: number;
+  tags: string[];
+}
+
 export interface DashboardSummary {
   /** Per-currency assets, e.g. { HKD: 1000, USD: 50 } */
   assets: { [currency: string]: number } | null;
@@ -148,6 +158,7 @@ export interface DashboardSummary {
     description: string;
     amount: number | null;
     currency: string;
+    lines?: JournalLine[];
   }[];
 }
 

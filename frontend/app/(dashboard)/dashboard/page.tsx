@@ -1,8 +1,9 @@
 'use client';
 
-import { useDashboardSummary, useDefaultCurrency } from '@/hooks/use-api';
+import { useDashboardSummary, useDefaultCurrency, useAccounts } from '@/hooks/use-api';
 import { useCurrencies } from '@/hooks/use-currencies';
 import { formatCurrency, setCurrenciesCache } from '@/lib/currency-formatter';
+import { JournalEntryCard } from '@/components/journal/journal-entry-card';
 
 function formatNumber(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -77,40 +78,11 @@ function SummaryCard({
   );
 }
 
-function TransactionItem({
-  transaction,
-  defaultCurrency,
-}: {
-  transaction: {
-    id: string;
-    date: string;
-    description: string;
-    amount: number | undefined | null;
-    currency?: string;
-  };
-  defaultCurrency?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-3 border-b last:border-0">
-      <div>
-        <p className="font-medium">{transaction.description}</p>
-        <p className="text-sm text-muted-foreground">{transaction.date}</p>
-      </div>
-      <span
-        className={`font-medium ${
-          (transaction.amount ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
-        }`}
-      >
-        {formatCurrency(transaction.amount ?? 0, transaction.currency || defaultCurrency || 'USD')}
-      </span>
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const { data: summary, isLoading, error } = useDashboardSummary();
   const { data: currencies } = useCurrencies();
   const { data: defaultCurrency } = useDefaultCurrency();
+  const { data: accounts } = useAccounts();
 
   if (currencies) {
     setCurrenciesCache(currencies);
@@ -129,6 +101,11 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  const accountList = accounts?.map((a: { id: string; path: string }) => ({
+    id: a.id,
+    path: a.path,
+  })) || [];
 
   return (
     <div className="space-y-6">
@@ -165,14 +142,20 @@ export default function DashboardPage() {
         <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
         {isLoading ? (
           <div className="space-y-4">
-            <div className="h-12 bg-muted animate-pulse rounded" />
-            <div className="h-12 bg-muted animate-pulse rounded" />
-            <div className="h-12 bg-muted animate-pulse rounded" />
+            <div className="h-32 bg-muted animate-pulse rounded" />
+            <div className="h-32 bg-muted animate-pulse rounded" />
+            <div className="h-32 bg-muted animate-pulse rounded" />
           </div>
         ) : summary?.recentTransactions && summary.recentTransactions.length > 0 ? (
-          <div className="space-y-1">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {summary.recentTransactions.map((transaction) => (
-              <TransactionItem key={transaction.id} transaction={transaction} defaultCurrency={defaultCurrency} />
+              <JournalEntryCard
+                key={transaction.id}
+                entry={transaction as any}
+                accounts={accountList}
+                defaultCurrency={defaultCurrency}
+                variant="compact"
+              />
             ))}
           </div>
         ) : (
