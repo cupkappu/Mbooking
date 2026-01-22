@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Provider, ProviderType } from '../rates/provider.entity';
-import { CurrencyProviderService } from '../currencies/currency-provider.service';
-import { ProvidersService } from '../providers/providers.service';
+import { Provider, ProviderType } from '../../rates/provider.entity';
+import { CurrencyProviderService } from '../../currencies/currency-provider.service';
+import { ProvidersService } from '../../providers/providers.service';
 import { AuditEventPublisher } from '../events/audit-event-publisher.service';
 import { AuditLog } from '../decorators/audit-log.decorator';
 
@@ -88,7 +88,6 @@ export class ProviderManagementService {
 
     await this.providerRepository.save(provider);
 
-    // Auto-associate with all currencies
     await this.currencyProviderService.autoAssociateCurrencies(provider.id);
 
     return provider;
@@ -141,7 +140,6 @@ export class ProviderManagementService {
   ): Promise<void> {
     const provider = await this.getProvider(providerId);
 
-    // Remove currency associations first
     await this.currencyProviderService.removeProviderAssociations(providerId);
 
     await this.providerRepository.remove(provider);

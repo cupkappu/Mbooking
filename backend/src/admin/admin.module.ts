@@ -15,6 +15,7 @@ import { Provider } from '../rates/provider.entity';
 import { CurrenciesModule } from '../currencies/currencies.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { RatesModule } from '../rates/rates.module';
+import { AuditEventPublisher } from './events/audit-event-publisher.service';
 
 @Module({
   imports: [
@@ -35,7 +36,7 @@ import { RatesModule } from '../rates/rates.module';
     RatesModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService],
-  exports: [AdminService],
+  providers: [AdminService, AuditEventPublisher],
+  exports: [AdminService, AuditEventPublisher],
 })
 export class AdminModule {}
