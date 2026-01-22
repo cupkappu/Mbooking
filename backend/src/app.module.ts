@@ -16,6 +16,7 @@ import { ReportsModule } from './reports/reports.module';
 import { CurrenciesModule } from './currencies/currencies.module';
 import { AdminModule } from './admin/admin.module';
 import { SeedsModule } from './common/seeds/seeds.module';
+import { SetupModule } from './setup/setup.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 
 @Module({
@@ -51,6 +52,7 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
     CurrenciesModule,
     AdminModule,
     SeedsModule,
+    SetupModule,
   ],
 })
 export class AppModule implements NestModule {
@@ -61,6 +63,7 @@ export class AppModule implements NestModule {
         '(api/v1/health)',
         '(api/v1/auth/login)',
         '(api/v1/auth/register)',
+        '(api/v1/setup)',
         '(api/docs)',
         '(api/json)',
       )

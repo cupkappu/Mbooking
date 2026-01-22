@@ -1,0 +1,159 @@
+openapi: 3.0.0
+info:
+  title: System Initialization API
+  version: 1.0.0
+  description: API for first-time system initialization
+
+paths:
+  /api/v1/setup/status:
+    get:
+      summary: Check initialization status
+      description: Returns whether the system has been initialized
+      tags:
+        - Setup
+      responses:
+        '200':
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitializationStatus'
+        '500':
+          description: Database connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/setup/initialize:
+    post:
+      summary: Initialize system
+      description: Creates the first admin user and seeds default data
+      tags:
+        - Setup
+      security:
+        - InitSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitializeRequest'
+      responses:
+        '201':
+          description: System initialized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitializeResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '403':
+          description: Invalid or missing initialization secret
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: System already initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Database or internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    InitSecret:
+      type: apiKey
+      in: header
+      name: X-Init-Secret
+
+  schemas:
+    InitializeRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: admin@example.com
+        password:
+          type: string
+          minLength: 12
+          example: SecureP@ss123!
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Administrator
+        organizationName:
+          type: string
+          maxLength: 50
+          example: My Company
+
+    InitializeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: System initialized successfully
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            name:
+              type: string
+            role:
+              type: string
+
+    InitializationStatus:
+      type: object
+      properties:
+        initialized:
+          type: boolean
+        userCount:
+          type: integer
+
+    ValidationError:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: array
+          items:
+            type: string
+        error:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string

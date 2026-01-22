@@ -16,6 +16,11 @@ export class AdminUserSeedService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // Skip auto-seeding if INIT_SECRET is set (setup feature enabled)
+    if (process.env.INIT_SECRET) {
+      this.logger.log('INIT_SECRET set - setup feature enabled, skipping auto seed');
+      return;
+    }
     await this.seedAdminUser();
   }
 

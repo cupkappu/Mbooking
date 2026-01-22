@@ -401,3 +401,10 @@ docker-compose logs -f  # View logs
 - Rate providers can be JS plugins or REST API configs
 - Reports generated on-demand; can be cached for 1 hour
 - Root page uses `dynamic()` with `ssr: false` to avoid useSession SSR issues
+
+## Active Technologies
+- TypeScript (Frontend: Strict mode, Backend: Relaxed tsconfig) + Next.js 14, NestJS 10, TypeORM, PostgreSQL 15, NextAuth.js (001-system-initialize)
+- PostgreSQL with existing User and Tenant entities (001-system-initialize)
+
+## Recent Changes
+- 001-system-initialize: Added TypeScript (Frontend: Strict mode, Backend: Relaxed tsconfig) + Next.js 14, NestJS 10, TypeORM, PostgreSQL 15, NextAuth.js
