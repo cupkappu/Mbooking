@@ -314,7 +314,7 @@ export class SchemaInitService implements OnModuleInit {
     // Journal indexes
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_journal_entries_tenant ON journal_entries(tenant_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(date)`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id)`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(journal_entry_id)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_journal_lines_account ON journal_lines(account_id)`);
     
     // Budgets indexes
