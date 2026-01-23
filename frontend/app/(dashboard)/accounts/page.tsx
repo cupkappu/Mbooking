@@ -25,6 +25,7 @@ import {
 import { BalanceDisplay } from '@/components/accounts/BalanceDisplay';
 import type { CurrencyBalance, AccountBalance } from '@/types';
 import { formatCurrency, setCurrenciesCache } from '@/lib/currency-formatter';
+import { ExportButton } from '@/components/export/export-button';
 
 function formatNumber(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -357,10 +358,13 @@ export default function AccountsPage() {
           <h1 className="text-3xl font-bold">Accounts</h1>
           <p className="text-muted-foreground">Manage your chart of accounts</p>
         </div>
-        <Button onClick={handleAddNew}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Account
-        </Button>
+        <div className="flex gap-2">
+          <ExportButton type="accounts" />
+          <Button onClick={handleAddNew}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Account
+          </Button>
+        </div>
       </div>
 
         <div className="flex flex-col gap-4">

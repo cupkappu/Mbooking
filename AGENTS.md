@@ -405,6 +405,8 @@ docker-compose logs -f  # View logs
 ## Active Technologies
 - TypeScript (Frontend: Strict mode, Backend: Relaxed tsconfig) + Next.js 14, NestJS 10, TypeORM, PostgreSQL 15, NextAuth.js (001-system-initialize)
 - PostgreSQL with existing User and Tenant entities (001-system-initialize)
+- TypeScript (both frontend and backend - Next.js 14 + NestJS 10) + Next.js 14 App Router, NestJS 10, TypeORM, PostgreSQL 15, React Query (001-export-csv)
+- PostgreSQL 15 with TypeORM entities (001-export-csv)
 
 ## Recent Changes
 - 001-system-initialize: Added TypeScript (Frontend: Strict mode, Backend: Relaxed tsconfig) + Next.js 14, NestJS 10, TypeORM, PostgreSQL 15, NextAuth.js

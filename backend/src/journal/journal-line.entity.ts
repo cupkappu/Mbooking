@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { JournalEntry } from './journal-entry.entity';
+import { Account } from '../accounts/account.entity';
 
 @Entity('journal_lines')
 export class JournalLine {
@@ -18,6 +19,10 @@ export class JournalLine {
 
   @Column()
   account_id: string;
+
+  @ManyToOne(() => Account, { eager: true })
+  @JoinColumn({ name: 'account_id' })
+  account: Account;
 
   @Column({ type: 'decimal', precision: 20, scale: 4 })
   amount: number;

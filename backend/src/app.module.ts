@@ -20,6 +20,7 @@ import { AdminModule } from './admin/admin.module';
 import { SeedsModule } from './common/seeds/seeds.module';
 import { SetupModule } from './setup/setup.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
+import { ExportModule } from './export/export.module';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -56,6 +57,7 @@ const isTest = process.env.NODE_ENV === 'test';
     AdminModule,
     SeedsModule,
     SetupModule,
+    ExportModule,
   ],
 })
 export class AppModule implements NestModule {

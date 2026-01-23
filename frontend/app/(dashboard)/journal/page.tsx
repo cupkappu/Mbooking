@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit2, Trash2, Calendar, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, FileText, Download } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ExportButton } from '@/components/export/export-button';
 
 export default function JournalPage() {
   const { data: journalData, isLoading, refetch } = useJournalEntries();
@@ -157,21 +158,24 @@ export default function JournalPage() {
           <h1 className="text-3xl font-bold">Journal</h1>
           <p className="text-muted-foreground">Record your financial transactions</p>
         </div>
-        <Button onClick={() => {
-          setEditingEntry(null);
-          setFormData({
-            date: new Date().toISOString().split('T')[0],
-            description: '',
-            lines: [
-              { account_id: '', amount: 0, currency: 'USD', tags: [] },
-              { account_id: '', amount: 0, currency: 'USD', tags: [] },
-            ],
-          });
-          setShowForm(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Entry
-        </Button>
+        <div className="flex gap-2">
+          <ExportButton type="bills" />
+          <Button onClick={() => {
+            setEditingEntry(null);
+            setFormData({
+              date: new Date().toISOString().split('T')[0],
+              description: '',
+              lines: [
+                { account_id: '', amount: 0, currency: 'USD', tags: [] },
+                { account_id: '', amount: 0, currency: 'USD', tags: [] },
+              ],
+            });
+            setShowForm(true);
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Entry
+          </Button>
+        </div>
       </div>
 
       {showForm && (
