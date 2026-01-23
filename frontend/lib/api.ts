@@ -16,8 +16,13 @@ class ApiClient {
     return headers;
   }
 
-  private async getAuthHeader(): Promise<string | undefined> {
+  private async getAuthHeader(endpoint?: string): Promise<string | undefined> {
     if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    // Skip auth header for setup API calls (no token needed during initialization)
+    if (endpoint && endpoint.includes('setup')) {
       return undefined;
     }
 
@@ -57,8 +62,8 @@ class ApiClient {
     const path = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
     const url = `/api/v1/${path}`;
     
-    // 获取认证头
-    const authHeader = await this.getAuthHeader();
+    // 获取认证头（跳过 setup API）
+    const authHeader = await this.getAuthHeader(endpoint);
     
     const headers: HeadersInit = {
       ...this.getHeaders(),

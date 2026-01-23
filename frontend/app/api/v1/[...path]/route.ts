@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 export async function GET(
   request: NextRequest,
   { params }: { params: { path: string[] } }
@@ -39,7 +37,7 @@ export async function DELETE(
 
 async function proxyRequest(request: NextRequest, path: string[]) {
   const pathString = path.join('/');
-  const url = new URL(`/api/v1/${pathString}`, API_URL);
+  const url = new URL(`/api/v1/${pathString}`, process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
 
   const headers: Record<string, string> = {};
   request.headers.forEach((value, key) => {
@@ -49,11 +47,13 @@ async function proxyRequest(request: NextRequest, path: string[]) {
   });
 
   try {
+    // Do not automatically follow redirects from backend; return them to the client
     const response = await fetch(url.toString(), {
       method: request.method,
       headers,
       body: request.body,
       cache: 'no-store',
+      redirect: 'manual',
     });
 
     const responseHeaders = new Headers();

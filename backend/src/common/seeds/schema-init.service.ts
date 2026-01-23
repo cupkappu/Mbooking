@@ -48,11 +48,13 @@ export class SchemaInitService implements OnModuleInit {
         CREATE TABLE IF NOT EXISTS users (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           email VARCHAR(255) NOT NULL UNIQUE,
-          name VARCHAR(100) NOT NULL,
+          name VARCHAR(100),
           password VARCHAR(255),
-          role VARCHAR(50) DEFAULT 'user',
+          image VARCHAR(255),
           provider VARCHAR(50) DEFAULT 'credentials',
+          provider_id VARCHAR(255),
           is_active BOOLEAN DEFAULT true,
+          role VARCHAR(50) DEFAULT 'user',
           tenant_id UUID,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -65,9 +67,11 @@ export class SchemaInitService implements OnModuleInit {
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS tenants (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID UNIQUE,
           name VARCHAR(255) NOT NULL,
           slug VARCHAR(100) UNIQUE,
           settings JSONB DEFAULT '{}',
+          is_active BOOLEAN DEFAULT true,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
           deleted_at TIMESTAMP WITH TIME ZONE
@@ -137,10 +141,11 @@ export class SchemaInitService implements OnModuleInit {
           code VARCHAR(10) PRIMARY KEY,
           name VARCHAR(100) NOT NULL,
           symbol VARCHAR(10),
-          decimals INTEGER DEFAULT 2,
+          decimal_places INTEGER DEFAULT 2,
           is_active BOOLEAN DEFAULT true,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          deleted_at TIMESTAMP WITH TIME ZONE
         )
       `);
       this.logger.debug('Created currencies table');

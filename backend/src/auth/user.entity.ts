@@ -31,7 +31,7 @@ export class User {
   role: string;
 
   @OneToOne(() => Tenant)
-  @JoinColumn()
+  @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
   @Column({ nullable: true })

@@ -6,6 +6,14 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
+    // Setup route - allow unauthenticated access (system not initialized)
+    // This prevents redirect loops during initial setup
+    if (path.startsWith('/setup')) {
+      // If system is already initialized, redirect to dashboard
+      // The setup page itself handles this check via API
+      return NextResponse.next();
+    }
+
     // Admin route protection - require admin role
     if (path.startsWith('/admin')) {
       if (token?.role !== 'admin') {
@@ -33,13 +41,22 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const path = req.nextUrl.pathname;
+        // Allow unauthenticated access to setup routes
+        if (path.startsWith('/setup')) {
+          return true;
+        }
+        // All other matched routes require authentication
+        return !!token;
+      },
     },
   }
 );
 
 export const config = {
   matcher: [
+    '/setup/:path*',
     '/admin/:path*',
     '/dashboard/:path*',
     '/accounts/:path*',

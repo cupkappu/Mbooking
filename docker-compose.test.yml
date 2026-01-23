@@ -11,13 +11,15 @@ services:
     image: postgres:15-alpine
     container_name: mca_postgres_test
     environment:
-      POSTGRES_USER: test
-      POSTGRES_PASSWORD: test
-      POSTGRES_DB: test_db
+      POSTGRES_USER: ${DB_USER:-test}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-test}
+      POSTGRES_DB: ${DB_NAME:-test_db}
+    env_file:
+      - ./.env.test.local
     ports:
       - "5433:5432"  # Different port from dev (5432) to avoid conflicts
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U test -d test_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-test} -d ${DB_NAME:-test_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -32,28 +34,23 @@ services:
       dockerfile: Dockerfile
     container_name: mca_backend_test
     environment:
-      # Database connection - points to postgres_test service
       DATABASE_HOST: postgres_test
       DATABASE_PORT: 5432
-      DATABASE_USER: test
-      DATABASE_PASSWORD: test
-      DATABASE_NAME: test_db
-
-      # JWT and Auth configuration
-      JWT_SECRET: test-secret-key-for-testing-only-do-not-use-in-production
-      NEXTAUTH_SECRET: test-nextauth-secret-for-testing-only-do-not-use-in-production
-      NEXTAUTH_URL: http://localhost:8068
-      NEXT_PUBLIC_API_URL: http://localhost:8067
-      INIT_SECRET: ${INIT_SECRET:-test-init-secret}
-      # Environment
+      DATABASE_USER: ${DB_USER:-test}
+      DATABASE_PASSWORD: ${DB_PASSWORD:-test}
+      DATABASE_NAME: ${DB_NAME:-test_db}
+      JWT_SECRET: ${JWT_SECRET:-test-jwt-secret-key-min-32-chars-long}
+      AUTH_SECRET: ${AUTH_SECRET:-test-auth-secret}
       NODE_ENV: test
-      LOG_LEVEL: debug
+      PORT: 3001
     ports:
       - "8067:3001"
     depends_on:
       postgres_test:
         condition: service_healthy
     restart: unless-stopped
+    env_file:
+      - ./.env.test.local
 
   # Frontend service - test configuration
   frontend_test:
@@ -61,9 +58,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: mca_frontend_test
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8067
-      NODE_ENV: test
+    env_file:
+      - ./.env.test.local
     ports:
       - "8068:3000"
     depends_on:
