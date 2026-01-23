@@ -40,7 +40,7 @@ export class InitializeSystemDto {
   email: string;
 
   @MinLength(12)
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
   password: string;
 
   @MinLength(1)
