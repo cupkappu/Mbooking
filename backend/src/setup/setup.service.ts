@@ -119,7 +119,6 @@ export class SetupService {
     const hasUppercase = /[A-Z]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*]/.test(password);
 
     const errors: string[] = [];
     if (password.length < minLength) {
@@ -133,9 +132,6 @@ export class SetupService {
     }
     if (!hasNumber) {
       errors.push('Password must contain at least 1 number');
-    }
-    if (!hasSpecial) {
-      errors.push('Password must contain at least 1 special character (!@#$%^&*)');
     }
 
     if (errors.length > 0) {

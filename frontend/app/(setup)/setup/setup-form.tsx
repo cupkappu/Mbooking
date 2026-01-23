@@ -17,8 +17,7 @@ const setupSchema = z.object({
     .min(12, 'Password must be at least 12 characters')
     .regex(/[A-Z]/, 'Password must contain at least 1 uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least 1 lowercase letter')
-    .regex(/\d/, 'Password must contain at least 1 number')
-    .regex(/[!@#$%^&*]/, 'Password must contain at least 1 special character (!@#$%^&*)'),
+    .regex(/\d/, 'Password must contain at least 1 number'),
   name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
   organizationName: z.string().optional(),
 });
@@ -65,7 +64,6 @@ export function SetupForm() {
   const hasUpperCase = /[A-Z]/.test(passwordValue || '');
   const hasLowerCase = /[a-z]/.test(passwordValue || '');
   const hasNumber = /\d/.test(passwordValue || '');
-  const hasSpecial = /[!@#$%^&*]/.test(passwordValue || '');
   const hasMinLength = (passwordValue || '').length >= 12;
 
   return (
@@ -155,9 +153,6 @@ export function SetupForm() {
                 </p>
                 <p className={hasNumber ? 'text-green-500' : 'text-gray-500'}>
                   {hasNumber ? '✓' : '○'} 1 number
-                </p>
-                <p className={hasSpecial ? 'text-green-500' : 'text-gray-500'}>
-                  {hasSpecial ? '✓' : '○'} 1 special character (!@#$%^&*)
                 </p>
               </div>
             )}
