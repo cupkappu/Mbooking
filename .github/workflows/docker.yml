@@ -1,0 +1,211 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow
+name: Docker CI & Build
+
+on:
+  push:
+    branches: [master, develop]
+    tags:
+      - v*
+  pull_request:
+    branches: [master, develop]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: accounting
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: accounting
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: runner
+          builder: ${{ steps.buildx.outputs.name }}
+          platforms: linux/amd64,linux/arm64
+          push: false
+          load: true
+          tags: backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: runner
+          builder: ${{ steps.buildx.outputs.name }}
+          platforms: linux/amd64,linux/arm64
+          push: false
+          load: true
+          tags: frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify backend image
+        run: |
+          echo "=== Backend image structure ==="
+          docker run --rm backend:test ls -la /app/dist 2>/dev/null || echo "dist/ not found, checking root..."
+          docker run --rm backend:test ls -la /app/ 2>/dev/null | head -20
+
+          echo ""
+          echo "=== Checking for TypeScript source files (excluding node_modules) ==="
+          TS_COUNT=$(docker run --rm backend:test find /app -path /app/node_modules -prune -o -name "*.ts" -print 2>/dev/null | wc -l)
+          if [ "$TS_COUNT" -gt 0 ]; then
+            echo "Error: Found $TS_COUNT TypeScript files outside node_modules:"
+            docker run --rm backend:test find /app -path /app/node_modules -prune -o -name "*.ts" -print 2>/dev/null
+            exit 1
+          fi
+          echo "✅ Backend image verified: No TypeScript source files outside node_modules"
+
+      - name: Verify frontend image
+        run: |
+          echo "=== Frontend image structure ==="
+          docker run --rm frontend:test ls -la /app/.next/standalone/ 2>/dev/null || echo "Checking root..."
+          docker run --rm frontend:test ls -la /app/server.js 2>/dev/null && echo "✅ server.js exists" || echo "❌ server.js not found"
+
+      - name: Docker Compose validation
+        run: |
+          docker compose -f docker-compose.yml config > /dev/null
+          echo "✅ Docker Compose configuration is valid"
+
+      - name: Run backend unit tests
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_USER: accounting
+          DATABASE_PASSWORD: secret
+          DATABASE_NAME: accounting
+          JWT_SECRET: test-secret-for-ci
+          NEXTAUTH_SECRET: test-secret-for-ci
+          NEXTAUTH_URL: http://localhost:3001
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+        run: |
+          echo "=== Running backend tests ==="
+          docker run --rm \
+            -e DATABASE_HOST=host.docker.internal \
+            -e DATABASE_PORT=5432 \
+            -e DATABASE_USER=accounting \
+            -e DATABASE_PASSWORD=secret \
+            -e DATABASE_NAME=accounting \
+            -e JWT_SECRET=test-secret-for-ci \
+            -e NEXTAUTH_SECRET=test-secret-for-ci \
+            -e NEXTAUTH_URL=http://localhost:3001 \
+            -e NEXT_PUBLIC_API_URL=http://localhost:3001 \
+            backend:test npm test -- --forceExit 2>&1
+          TEST_EXIT_CODE=$?
+
+          echo ""
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "✅ All tests passed"
+          else
+            echo "❌ Tests failed with exit code $TEST_EXIT_CODE"
+            exit $TEST_EXIT_CODE
+          fi
+
+  push-to-registry:
+    needs: build-and-verify
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          tags: |
+            type=ref,event=branch,enable={{ is_default_branch }}
+            type=raw,value=latest,enable={{ is_default_branch }}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{ version }}
+            type=semver,pattern={{ major }}.{{ minor }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: runner
+          builder: ${{ steps.buildx.outputs.name }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.version }}-backend
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: runner
+          builder: ${{ steps.buildx.outputs.name }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.version }}-frontend
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Inspect backend image
+        if: steps.meta.outputs.version != ''
+        run: |
+          docker buildx imagetools inspect \
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.version }}-backend
+
+      - name: Inspect frontend image
+        if: steps.meta.outputs.version != ''
+        run: |
+          docker buildx imagetools inspect \
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.version }}-frontend

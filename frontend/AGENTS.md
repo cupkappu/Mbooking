@@ -2,6 +2,7 @@
 
 **Location:** `frontend/`
 **Port:** 3000
+**Generated:** 2026-01-24
 
 ---
 
@@ -99,6 +100,12 @@ frontend/components/
 │   ├── progress-bar/
 │   └── budget-form/
 │
+├── export/                   # Export components
+│   └── export-button/
+│
+├── home/                     # Home page components
+│   └── stats-cards/
+│
 └── common/                   # Shared components
     ├── date-picker/
     ├── currency-input/
@@ -117,7 +124,12 @@ frontend/hooks/
 ├── use-rates.ts              # Exchange rates
 ├── use-budgets.ts            # Budget data
 ├── use-reports.ts            # Report generation
-└── use-api.ts                # Generic API calls
+├── use-api.ts                # Generic API calls
+├── use-admin.ts              # Admin operations
+├── use-currencies.ts         # Currency management
+├── use-setup.ts              # Setup flow
+├── use-export-accounts.ts    # Account export
+└── use-export-bills.ts       # Bill export
 ```
 
 ---

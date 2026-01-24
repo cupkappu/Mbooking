@@ -1,9 +1,82 @@
 # Multi-Currency Accounting - Agent Knowledge Base
 
-**Generated:** 2026-01-21
-**Commit:** 0dc90cf0 (feat: enhance provider creation form with new fields and validation)
-**Branch:** develop
+**Generated:** 2026-01-24
+**Commit:** 0f48536a
+**Branch:** master
 **Tech Stack:** Next.js 14 + NestJS 10 + PostgreSQL 15
+
+---
+
+## Docker 强制验证规则 (CRITICAL - MUST FOLLOW)
+
+**⚠️ 此规则必须严格遵守，不允许绕过或忽略**
+
+### 验证前置条件
+
+在每次代码验证和功能实现后，**必须**执行以下步骤：
+
+#### 步骤 1: 启动 Docker 测试环境
+```bash
+docker compose -f docker-compose.test.yml up -d --build
+```
+
+#### 步骤 2: 等待服务就绪
+确保以下服务正常运行：
+- PostgreSQL (端口 5433)
+- Backend API (端口 8067)
+- Frontend (端口 8068)
+
+#### 步骤 3: 运行 E2E 测试
+```bash
+npm run test:e2e
+```
+
+#### 步骤 4: 验证结果
+- 所有测试必须通过
+- 不允许忽略测试失败
+- 测试失败时必须修复问题，不能绕过
+
+### 验证检查清单
+
+每次提交代码前必须确认：
+- [ ] Docker 测试环境已启动并构建
+- [ ] 所有 E2E 测试通过
+- [ ] 无 lint 错误
+- [ ] 类型检查通过
+- [ ] 代码已提交
+
+### 不允许的行为
+
+❌ **绝对禁止：**
+- 使用本地开发服务验证代码
+- 跳过 Docker 环境直接测试
+- 忽略测试失败并提交代码
+- 使用其他验证方式绕过 Docker 测试
+- 删除或禁用测试来"通过"验证
+
+### 自动化验证脚本
+
+项目提供了自动化验证脚本，推荐使用：
+
+```bash
+# 完整验证流程（推荐）
+./scripts/verify-and-test.sh
+
+# 此脚本会自动：
+# 1. 检查前置条件
+# 2. 停止现有容器
+# 3. 构建并启动 Docker 环境
+# 4. 运行 E2E 测试
+# 5. 显示结果并清理
+```
+
+### Git Hook 强制执行
+
+项目已配置 pre-commit hook，会自动强制执行 Docker 验证。
+
+### CI/CD 最终防线
+
+GitHub Actions 会自动运行 Docker 测试，任何失败的测试都会阻止合并。
 
 ---
 
@@ -407,6 +480,8 @@ docker-compose logs -f  # View logs
 - PostgreSQL with existing User and Tenant entities (001-system-initialize)
 - TypeScript (both frontend and backend - Next.js 14 + NestJS 10) + Next.js 14 App Router, NestJS 10, TypeORM, PostgreSQL 15, React Query (001-export-csv)
 - PostgreSQL 15 with TypeORM entities (001-export-csv)
+- TypeScript 5.x (frontend strict mode) + React, Next.js 14, Tailwind CSS, shadcn/ui, React Query (004-journal-auto-balance)
+- N/A (frontend-only, operates on in-memory state) (004-journal-auto-balance)
 
 ## Recent Changes
 - 001-system-initialize: Added TypeScript (Frontend: Strict mode, Backend: Relaxed tsconfig) + Next.js 14, NestJS 10, TypeORM, PostgreSQL 15, NextAuth.js

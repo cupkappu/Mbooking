@@ -2,6 +2,9 @@
 
 **Location:** `backend/src/`
 **Port:** 3001
+**Last Updated:** 2026-01-24
+**Commit:** 0f48536a217e5f1a79340c5a79f1cf94b023d801
+**Branch:** master
 
 ---
 
@@ -11,6 +14,13 @@
 backend/src/
 ├── auth/           # JWT + NextAuth integration
 ├── accounts/       # Account CRUD + hierarchy
+├── admin/          # Admin panel + granular services
+│   ├── services/   # Granular admin services (17 files)
+│   ├── dto/        # Admin DTOs
+│   ├── entities/   # Admin entities
+│   ├── decorators/ # Admin-specific decorators
+│   ├── guards/     # Admin guards
+│   └── events/     # Admin event handlers
 ├── journal/        # Double-entry ledger
 ├── query/          # Balance query engine
 ├── rates/          # Exchange rate engine
@@ -18,6 +28,10 @@ backend/src/
 ├── scheduler/      # Rate fetching cron
 ├── budgets/        # Budget management
 ├── reports/        # Financial statements
+├── export/         # CSV export functionality
+│   ├── dto/        # Export DTOs
+│   ├── entities/   # Export entities
+│   └── streams/    # CSV transformation streams
 ├── tenants/        # Multi-tenant RLS
 ├── currencies/     # Currency registry
 ├── common/         # Shared utilities
@@ -62,6 +76,38 @@ backend/src/
 **Related:**
 - [Requirements - Core Features](../docs/requirements/REQUIREMENTS_CORE.md)
 - [Requirements - Database](../docs/requirements/REQUIREMENTS_DATABASE.md)
+
+---
+
+### admin/ (Admin Panel)
+
+**Handles:**
+- User management (CRUD, roles, permissions)
+- System configuration management
+- Currency management
+- Provider management (rate providers)
+- Plugin management (JS plugins)
+- Scheduler management (cron jobs)
+- Health monitoring
+- Audit logging
+
+**Key files:**
+- `admin.service.ts` - Monolithic admin service (root level)
+- `admin.controller.ts` - Admin REST endpoints
+- `admin.module.ts` - Module definition
+
+**Key files in `services/` subdirectory:**
+- `user-management.service.ts` - User CRUD, role management
+- `system-config.service.ts` - System configuration
+- `currency-management.service.ts` - Currency settings
+- `provider-management.service.ts` - Rate provider management
+- `plugin-management.service.ts` - JS plugin management
+- `scheduler-management.service.ts` - Cron job management
+- `health-monitoring.service.ts` - System health checks
+- `audit-log.service.ts` - Audit trail logging
+
+**Related:**
+- [Requirements - Admin](../docs/requirements/REQUIREMENTS_ADMIN.md)
 
 ---
 
@@ -185,6 +231,37 @@ backend/src/
 
 ---
 
+### export/ (CSV Export)
+
+**Handles:**
+- Journal entry exports to CSV
+- Account exports to CSV
+- Export audit logging
+- Streaming CSV transformations
+- Date preset filtering
+
+**Key files:**
+- `export.service.ts` - Export business logic
+- `export.controller.ts` - Export REST endpoints
+- `export.module.ts` - Module definition
+
+**Key files in `streams/` subdirectory:**
+- `csv-transform.stream.ts` - Stream-based CSV transformation
+- `csv-formatter.util.ts` - CSV formatting utilities
+
+**Key files in `dto/` subdirectory:**
+- `export-bills.dto.ts` - Bills export DTO with date presets
+- `export-filters.dto.ts` - Export filter DTOs
+- `export-accounts.dto.ts` - Account export DTO
+
+**Key files in `entities/` subdirectory:**
+- `export-audit.entity.ts` - Export audit log entity
+
+**Related:**
+- [Requirements - Export CSV](../docs/requirements/REQUIREMENTS_API.md#export-endpoints)
+
+---
+
 ### tenants/ (Multi-Tenancy)
 
 **Handles:**
@@ -244,6 +321,27 @@ src/{feature}/
 ├── entities/             # TypeORM entities
 ├── dto/                  # Input validation
 └── {feature}.spec.ts     # Tests
+```
+
+**Exception:** The `admin/` module has a `services/` subdirectory with granular services:
+```
+src/admin/
+├── admin.module.ts         # Module definition
+├── admin.service.ts        # Monolithic service (legacy)
+├── admin.controller.ts     # REST endpoints
+├── services/               # Granular admin services
+│   ├── user-management.service.ts
+│   ├── system-config.service.ts
+│   ├── currency-management.service.ts
+│   ├── provider-management.service.ts
+│   ├── plugin-management.service.ts
+│   ├── scheduler-management.service.ts
+│   ├── health-monitoring.service.ts
+│   └── audit-log.service.ts
+├── dto/                   # Admin DTOs
+├── entities/              # Admin entities
+├── decorators/            # Admin decorators
+└── guards/                # Admin guards
 ```
 
 ### Entity Design
