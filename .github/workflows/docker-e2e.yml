@@ -91,13 +91,13 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
         run: |
-          # Use next dev for development server on port 3000
-          npx next dev -p 3000 &
-          sleep 15
+          # Use next dev for development server on port 8068 (matching playwright baseURL)
+          npx next dev -p 8068 &
+          sleep 20
           # Check if server is ready
           for i in {1..30}; do
-            if curl -s http://localhost:3000 > /dev/null 2>&1; then
-              echo "Frontend is ready!"
+            if curl -s http://localhost:8068 > /dev/null 2>&1; then
+              echo "Frontend is ready on port 8068!"
               exit 0
             fi
             echo "Waiting for frontend... ($i/30)"
