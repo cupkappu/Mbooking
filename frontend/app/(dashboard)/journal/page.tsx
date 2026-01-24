@@ -8,6 +8,7 @@ import { useJournalEntries, useAccounts, useCreateJournalEntry, useUpdateJournal
 import { useCurrencies } from '@/hooks/use-currencies';
 import { setCurrenciesCache, formatCurrency, formatCurrencyWithSign } from '@/lib/currency-formatter';
 import type { JournalEntry, Account } from '@/types';
+import type { JournalLineFormState } from '@/types/auto-balance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,6 +24,31 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ExportButton } from '@/components/export/export-button';
+import { AutoBalanceButton } from '@/components/journal/AutoBalanceButton';
+import { useAutoBalance } from '@/hooks/useAutoBalance';
+
+// Form state interface
+interface JournalFormState {
+  date: string;
+  description: string;
+  lines: JournalLineFormState[];
+}
+
+// Create empty lines
+const createEmptyLines = (count: number, currency: string): JournalLineFormState[] =>
+  Array.from({ length: count }, () => ({
+    account_id: '',
+    amount: 0,
+    currency,
+    tags: [],
+  }));
+
+// Initial form state
+const createInitialFormState = (currency: string): JournalFormState => ({
+  date: new Date().toISOString().split('T')[0],
+  description: '',
+  lines: createEmptyLines(2, currency),
+});
 
 export default function JournalPage() {
   const { data: journalData, isLoading, refetch } = useJournalEntries();
@@ -42,14 +68,9 @@ export default function JournalPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<JournalEntry | null>(null);
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    lines: [
-      { account_id: '', amount: 0, currency: 'USD', tags: [] as string[] },
-      { account_id: '', amount: 0, currency: 'USD', tags: [] as string[] },
-    ],
-  });
+  const [formData, setFormData] = useState<JournalFormState>(
+    createInitialFormState(defaultCurrency || 'USD')
+  );
 
   // Helper to handle amount changes including negative numbers
   const handleAmountChange = (index: number, value: string) => {
@@ -67,10 +88,7 @@ export default function JournalPage() {
         amount: parseFloat(String(line.amount)) || 0,
         currency: line.currency,
         tags: line.tags || [],
-      })) || [
-        { account_id: '', amount: 0, currency: 'USD', tags: [] },
-        { account_id: '', amount: 0, currency: 'USD', tags: [] },
-      ],
+      })) || createEmptyLines(2, defaultCurrency || 'USD'),
     });
     setShowForm(true);
   };
@@ -99,21 +117,14 @@ export default function JournalPage() {
 
     setShowForm(false);
     setEditingEntry(null);
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      lines: [
-        { account_id: '', amount: 0, currency: 'USD', tags: [] },
-        { account_id: '', amount: 0, currency: 'USD', tags: [] },
-      ],
-    });
+    setFormData(createInitialFormState(defaultCurrency || 'USD'));
     refetch();
   };
 
   const addLine = () => {
     setFormData({
       ...formData,
-      lines: [...formData.lines, { account_id: '', amount: 0, currency: 'USD', tags: [] }],
+      lines: [...formData.lines, { account_id: '', amount: 0, currency: defaultCurrency || 'USD', tags: [] }],
     });
   };
 
@@ -130,6 +141,18 @@ export default function JournalPage() {
     }
   };
 
+  // Auto-balance hook integration
+  const handleAutoBalance = (result: { success: boolean; lines: JournalLineFormState[] }) => {
+    if (result.success) {
+      setFormData({ ...formData, lines: result.lines });
+    }
+  };
+
+  const autoBalanceHook = useAutoBalance({
+    lines: formData.lines,
+    onUpdate: (lines) => setFormData({ ...formData, lines }),
+  });
+
   const handleDelete = async () => {
     if (deletingEntry) {
       await deleteEntry.mutateAsync(deletingEntry.id);
@@ -143,8 +166,30 @@ export default function JournalPage() {
     return account?.path || 'Unknown';
   };
 
-  const calculateTotal = (lines: typeof formData.lines): number => {
-    return lines.reduce((sum, line) => sum + (line.amount || 0), 0);
+  const calculateTotalsByCurrency = (lines: typeof formData.lines): Map<string, number> => {
+    const totals = new Map<string, number>();
+    for (const line of lines) {
+      if (!line.account_id) continue;
+      const current = totals.get(line.currency) || 0;
+      totals.set(line.currency, current + (line.amount || 0));
+    }
+    return totals;
+  };
+
+  const isBalanced = (lines: typeof formData.lines): boolean => {
+    const totals = calculateTotalsByCurrency(lines);
+    return Array.from(totals.values()).every(total => Math.abs(total) <= 0.0001);
+  };
+
+  const getUnbalancedCurrencies = (lines: typeof formData.lines): string[] => {
+    const totals = calculateTotalsByCurrency(lines);
+    const unbalanced: string[] = [];
+    Array.from(totals.entries()).forEach(([currency, total]) => {
+      if (Math.abs(total) > 0.0001) {
+        unbalanced.push(currency);
+      }
+    });
+    return unbalanced;
   };
 
   if (isLoading) {
@@ -231,7 +276,7 @@ export default function JournalPage() {
                       type="number"
                       step="any"
                       placeholder="Amount"
-                      value={line.amount === 0 ? '' : line.amount}
+                      value={line.amount === null || line.amount === undefined || line.amount === 0 ? '' : String(line.amount)}
                       onChange={(e) => handleAmountChange(index, e.target.value)}
                       className="w-32"
                       required
@@ -277,34 +322,55 @@ export default function JournalPage() {
                   <Plus className="h-3.5 w-3.5 mr-1" />
                   Add Line
                 </Button>
+                <AutoBalanceButton
+                  lines={formData.lines}
+                  onAutoBalance={handleAutoBalance}
+                />
               </div>
 
               <div className={`p-4 rounded-lg ${
-                calculateTotal(formData.lines) === 0 
-                  ? 'bg-muted' 
+                isBalanced(formData.lines)
+                  ? 'bg-muted'
                   : 'bg-red-50 border border-red-200'
               }`}>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Total:</span>
-                  <span className={
-                    calculateTotal(formData.lines) === 0 
-                      ? '' 
-                      : 'text-red-600 font-bold'
-                  }>
-                    ${calculateTotal(formData.lines).toFixed(2)}
-                  </span>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Balance by Currency:</span>
+                    {isBalanced(formData.lines) ? (
+                      <span className="text-green-600 font-medium">✓ Balanced</span>
+                    ) : (
+                      <span className="text-red-600 font-bold">✗ Unbalanced</span>
+                    )}
+                  </div>
+                  {Array.from(calculateTotalsByCurrency(formData.lines).entries()).map(([currency, total]) => {
+                    if (!formData.lines.some(l => l.currency === currency && l.account_id)) return null;
+                    return (
+                      <div key={currency} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{currency}:</span>
+                        <span className={Math.abs(total) > 0.0001 ? 'text-red-600 font-medium' : 'text-green-600'}>
+                          {formatCurrencyWithSign(total, currency)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {!isBalanced(formData.lines) && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Each currency must balance to 0. Unbalanced: {getUnbalancedCurrencies(formData.lines).join(', ')}
+                    </p>
+                  )}
                 </div>
-                {calculateTotal(formData.lines) !== 0 && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Entry must balance (total must be 0)
-                  </p>
-                )}
               </div>
 
               <div className="flex gap-2 pt-2">
+                {autoBalanceHook.errors.length > 0 && (
+                  <div className="text-sm text-red-600 flex items-center gap-1">
+                    <span>⚠</span>
+                    {autoBalanceHook.errors[0]}
+                  </div>
+                )}
                 <Button
                   type="submit"
-                  disabled={createEntry.isPending || updateEntry.isPending || calculateTotal(formData.lines) !== 0}
+                  disabled={createEntry.isPending || updateEntry.isPending || !isBalanced(formData.lines)}
                 >
                   {createEntry.isPending || updateEntry.isPending ? 'Saving...' : (editingEntry ? 'Update Entry' : 'Create Entry')}
                 </Button>

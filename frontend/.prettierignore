@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+build/
+dist/
+
+# Coverage
+coverage/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Test
+*.spec.ts
+*.spec.tsx
+*.test.ts
+*.test.tsx
+__snapshots__/
