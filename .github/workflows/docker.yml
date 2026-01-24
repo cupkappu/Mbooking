@@ -79,14 +79,25 @@ jobs:
           docker run --rm backend:test ls -la /app/ 2>/dev/null | head -20
 
           echo ""
-          echo "=== Checking for TypeScript source files (excluding node_modules) ==="
-          TS_COUNT=$(docker run --rm backend:test find /app -path /app/node_modules -prune -o -name "*.ts" -print 2>/dev/null | wc -l)
+          echo "=== Checking for TypeScript source files (excluding allowed directories) ==="
+          # Exclude: dist (compiled output), node_modules, src/config (TypeORM), src/migrations
+          TS_COUNT=$(docker run --rm backend:test find /app \
+            -path /app/node_modules -prune \
+            -o -path /app/dist -prune \
+            -o -path /app/src/config -prune \
+            -o -path /app/src/migrations -prune \
+            -o -name "*.ts" -type f -print 2>/dev/null | wc -l)
           if [ "$TS_COUNT" -gt 0 ]; then
-            echo "Error: Found $TS_COUNT TypeScript files outside node_modules:"
-            docker run --rm backend:test find /app -path /app/node_modules -prune -o -name "*.ts" -print 2>/dev/null
+            echo "Error: Found $TS_COUNT TypeScript source files:"
+            docker run --rm backend:test find /app \
+              -path /app/node_modules -prune \
+              -o -path /app/dist -prune \
+              -o -path /app/src/config -prune \
+              -o -path /app/src/migrations -prune \
+              -o -name "*.ts" -type f -print 2>/dev/null
             exit 1
           fi
-          echo "✅ Backend image verified: No TypeScript source files outside node_modules"
+          echo "✅ Backend image verified: No unexpected TypeScript source files"
 
       - name: Verify frontend image
         run: |
