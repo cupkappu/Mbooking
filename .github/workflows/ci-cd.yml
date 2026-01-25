@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow
-name: Docker CI & Build
+name: CI/CD
 
 on:
   push:
@@ -14,11 +14,14 @@ env:
   IMAGE: ${{ github.repository }}
 
 jobs:
+  # ============================================
+  # Stage 1: Build & Verify
+  # ============================================
   build-and-verify:
+    name: Build & Verify
     runs-on: ubuntu-latest
 
     permissions:
-      packages: write
       contents: read
 
     services:
@@ -80,7 +83,6 @@ jobs:
 
           echo ""
           echo "=== Checking for TypeScript source files (excluding allowed directories) ==="
-          # Exclude: dist (compiled output), node_modules, src/config (TypeORM), src/migrations
           TS_COUNT=$(docker run --rm backend:test find /app \
             -path /app/node_modules -prune \
             -o -path /app/dist -prune \
@@ -110,26 +112,119 @@ jobs:
           docker compose -f docker-compose.yml config > /dev/null
           echo "✅ Docker Compose configuration is valid"
 
-      - name: Run backend unit tests
-        env:
-          DATABASE_HOST: localhost
-          DATABASE_PORT: 5432
-          DATABASE_USER: accounting
-          DATABASE_PASSWORD: secret
-          DATABASE_NAME: accounting
-          JWT_SECRET: test-secret-for-ci
-          NEXTAUTH_SECRET: test-secret-for-ci
-          NEXTAUTH_URL: http://localhost:3001
-          NEXT_PUBLIC_API_URL: http://localhost:3001
-        run: |
-          echo "=== Running backend tests ==="
-          # Note: Production image does not include test files, skip test execution
-          echo "⚠️ Skipping tests - test files not included in production image"
-          echo "✅ Build verification complete"
-
-  push-to-registry:
-    needs: build-and-verify
+  # ============================================
+  # Stage 2: Quality Checks (parallel)
+  # ============================================
+  lint:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Frontend Lint
+        working-directory: ./frontend
+        run: npm run lint
+
+  # ============================================
+  # Stage 3: E2E Tests
+  # ============================================
+  e2e-test:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build-and-verify
+
+    env:
+      CI: true
+      # Database
+      DATABASE_HOST: postgres_test
+      DATABASE_PORT: 5432
+      DATABASE_USER: test
+      DATABASE_PASSWORD: test
+      DATABASE_NAME: test_db
+      # JWT
+      JWT_SECRET: test-jwt-secret-key-min-32-characters-long
+      AUTH_SECRET: test-auth-secret
+      # Auth.js
+      NEXTAUTH_URL: http://localhost:8068
+      NEXTAUTH_SECRET: test-nextauth-secret-key-min-32-characters-long-here
+      # API
+      NEXT_PUBLIC_API_URL: http://backend_test:3001
+      # Node Environment
+      NODE_ENV: test
+      INIT_SECRET: init_secret
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test images
+        run: |
+          docker compose -f docker-compose.test.yml build backend_test frontend_test
+
+      - name: Start test environment
+        run: |
+          docker compose -f docker-compose.test.yml up -d
+          # Wait for services to be healthy
+          for i in {1..60}; do
+            if docker compose -f docker-compose.test.yml ps | grep -q "healthy"; then
+              echo "All services are healthy!"
+              exit 0
+            fi
+            echo "Waiting for services... ($i/60)"
+            sleep 3
+          done
+          echo "Services not ready"
+          docker compose -f docker-compose.test.yml logs
+          exit 1
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E Tests
+        run: npx playwright test
+        env:
+          PLAYWRIGHT_FORCEON: 1
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-logs
+          path: |
+            docker-compose.logs
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.test.yml down
+
+  # ============================================
+  # Stage 4: Deploy (only on master/tag)
+  # ============================================
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build-and-verify, lint, e2e-test]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
 
     permissions:
@@ -155,7 +250,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          images: ${{ env.REGISTRY }}/${{ github.image }}
           tags: |
             type=ref,event=branch,enable={{ is_default_branch }}
             type=raw,value=latest,enable={{ is_default_branch }}
