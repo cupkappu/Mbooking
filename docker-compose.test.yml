@@ -54,6 +54,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://backend_test:3001
     container_name: mca_frontend_test
     ports:
       - "8068:3000"

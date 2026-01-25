@@ -9,6 +9,8 @@ RUN npm install
 COPY . .
 
 
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
 RUN npm run build
 
 # Production stage

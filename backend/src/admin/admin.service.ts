@@ -806,9 +806,10 @@ export class AdminService {
         const content = fs.readFileSync(filePath, 'utf-8');
         
         // Simple extraction of plugin metadata from file content
-        const nameMatch = content.match(/name\s*=\s*['"]([^'"]+)['"]/);
-        const versionMatch = content.match(/version\s*=\s*['"]([^'"]+)['"]/);
-        const descMatch = content.match(/description\s*=\s*['"]([^'"]+)['"]/);
+        // Plugin files use module.exports = { name: '...', version: '...', description: '...' }
+        const nameMatch = content.match(/name\s*:\s*['"]([^'"]+)['"]/);
+        const versionMatch = content.match(/version\s*:\s*['"]([^'"]+)['"]/);
+        const descMatch = content.match(/description\s*:\s*['"]([^'"]+)['"]/);
 
         plugins.push({
           id: uuidv4(),
