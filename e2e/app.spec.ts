@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { TEST_CREDENTIALS } from './constants';
 
-// Login helper - uses the admin user created via setup API
 async function login(page: any) {
-  await page.goto('http://localhost:8068/login', { waitUntil: 'networkidle' });
-  await page.fill('input[type="email"]', 'admin@test.com');
-  await page.fill('input[type="password"]', 'AdminTest123');
+  await page.goto('/login', { waitUntil: 'networkidle' });
+  await page.fill('input[type="email"]', TEST_CREDENTIALS.email);
+  await page.fill('input[type="password"]', TEST_CREDENTIALS.password);
   await Promise.all([
     page.waitForURL('**/dashboard**', { timeout: 10000 }),
     page.click('button[type="submit"]'),
@@ -38,7 +38,6 @@ test.describe('Login Page', () => {
 test.describe('Homepage Redirect', () => {
   test('should redirect to dashboard from root', async ({ page }) => {
     await login(page);
-    // Navigate to root and reload to trigger middleware redirect
     await page.goto('/');
     await page.reload();
     await page.waitForURL(/\/dashboard/, { timeout: 10000 });
@@ -102,20 +101,16 @@ test.describe('Reports Page', () => {
     await login(page);
     await page.goto('/reports');
 
-    // Check Balance Sheet button exists
     await expect(page.getByRole('button', { name: 'Balance Sheet' })).toBeVisible();
 
-    // Click on Income Statement
     await page.getByRole('button', { name: 'Income Statement' }).click();
 
-    // Check Income Statement button is now active (visible)
     await expect(page.getByRole('button', { name: 'Income Statement' })).toBeVisible();
   });
 
   test('should have date range inputs', async ({ page }) => {
     await login(page);
     await page.goto('/reports');
-    // Find label by text, then get sibling input
     const fromInput = page.locator('label:has-text("From")').locator('..').locator('input[type="date"]');
     const toInput = page.locator('label:has-text("To")').locator('..').locator('input[type="date"]');
 
@@ -137,11 +132,9 @@ test.describe('Settings Page', () => {
     await login(page);
     await page.goto('/settings');
 
-    // Click on Currencies tab
     await page.getByRole('button', { name: 'Currencies', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Currency Management' })).toBeVisible();
 
-    // Click back on General tab
     await page.getByRole('button', { name: 'General', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'General Settings' })).toBeVisible();
   });
