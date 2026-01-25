@@ -60,6 +60,12 @@ services:
     depends_on:
       - backend_test    # Wait for backend to be ready before starting
     restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend_test:3001
+      NODE_ENV: test
+      NEXTAUTH_SECRET=your-nextauth-secret
+
+      
 
 # No named volumes - uses tmpfs for postgres_test service
 # This ensures a completely fresh database on every run
