@@ -63,7 +63,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://backend_test:3001
       NODE_ENV: test
-      NEXTAUTH_SECRET=your-nextauth-secret
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-test-nextauth-secret-key-min-32-chars-long}
 
       
 
