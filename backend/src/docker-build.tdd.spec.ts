@@ -5,14 +5,16 @@
  * Full Docker build and integration tests run in CI pipeline.
  */
 
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect, beforeAll } from '@jest/globals';
 import * as fs from 'fs';
+import * as path from 'path';
 const YAML = require('yaml');
 
-const PROJECT_ROOT = '/Users/kifuko/dev/multi_currency_accounting';
-const BACKEND_DIR = `${PROJECT_ROOT}/backend`;
-const FRONTEND_DIR = `${PROJECT_ROOT}/frontend`;
-const DOCKER_COMPOSE_FILE = `${PROJECT_ROOT}/docker-compose.yml`;
+// Use relative paths from backend directory (where tests run from)
+const BACKEND_DIR = path.resolve(__dirname, '..');
+const PROJECT_ROOT = path.resolve(BACKEND_DIR, '..');
+const FRONTEND_DIR = path.resolve(PROJECT_ROOT, 'frontend');
+const DOCKER_COMPOSE_FILE = path.join(PROJECT_ROOT, 'docker-compose.yml');
 
 // ============================================================================
 // DOCKER FILE VALIDATION
