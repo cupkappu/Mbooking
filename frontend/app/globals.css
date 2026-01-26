@@ -56,4 +56,49 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Mobile touch optimizations */
+  @media (max-width: 768px) {
+    /* Improve touch scrolling */
+    .overflow-auto {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Better touch targets */
+    button, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Table touch improvements */
+    table {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Prevent horizontal scroll bounce on mobile */
+    html, body {
+      overflow-x: hidden;
+    }
+  }
+}
+
+/* Custom scrollbar for WebKit browsers (optional enhancement) */
+@media (hover: none) and (pointer: coarse) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
 }
