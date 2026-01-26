@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Budget } from './budget.entity';
 import { BudgetTemplate } from './entities/budget-template.entity';
@@ -17,7 +17,7 @@ import { BudgetAmountValidator } from './validators/budget-amount.validator';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Budget, BudgetTemplate, BudgetAlert, JournalLine, Account]),
-    QueryModule,
+    forwardRef(() => QueryModule),
   ],
   controllers: [BudgetsController],
   providers: [BudgetsService, BudgetAlertService, BudgetTemplateService, BudgetProgressService, TemplateSeedingService, BudgetAmountValidator],
