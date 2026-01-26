@@ -1,5 +1,5 @@
-# Cloudflare SSH Deployment Workflow
-# Deploys to dev server via Cloudflare Zero Trust SSH tunnel
+# Cloudflare WARP SSH Deployment
+# Connects to Cloudflare network via WARP, then SSH directly to server IP
 #
 # Triggers:
 # - Manual: workflow_dispatch (GitHub Actions UI)
@@ -30,7 +30,6 @@ on:
     types: [deploy-dev]
 
 env:
-  # Docker registry for images
   REGISTRY: ghcr.io
   IMAGE: ${{ github.repository }}
 
@@ -89,81 +88,58 @@ jobs:
           cache-to: type=gha,mode=max
 
       # ============================================
-      # Cloudflare SSH Tunnel Setup
+      # Cloudflare WARP Setup
       # ============================================
       - name: Install cloudflared
         uses: ./.github/actions/cloudflared
         with:
           version: 2024.11.0
 
-      - name: Create SSH directory
-        run: mkdir -p ~/.ssh
-
-      - name: Add SSH host key
+      - name: Configure SSH
         run: |
+          mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_NODE_SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
-
-      - name: Set SSH permissions
-        run: chmod 600 ~/.ssh/id_ed25519
-
-      - name: Write private key
-        run: |
           echo "${{ secrets.DEPLOY_NODE_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
       # ============================================
-      # Deploy via Cloudflare Tunnel SSH
+      # Connect to Cloudflare WARP and SSH
       # ============================================
-      - name: Deploy to dev server via Cloudflare SSH
+      - name: Deploy via Cloudflare WARP
         run: |
-          # Start cloudflared tunnel in background
-          cloudflared access tcp \
-            --hostname ${{ secrets.DEPLOY_NODE_CF_TUNNEL_HOST }} \
-            --url ssh://localhost:2222 \
-            &
-          CF_PID=$!
+          # Connect to Cloudflare network via WARP
+          cloudflared access ssh --hostname ${{ secrets.DEPLOY_NODE_ADDR }}
 
-          # Wait for tunnel to establish
-          sleep 5
-
-          # SSH through the tunnel and execute deploy commands
+          # SSH directly to server IP (now accessible through WARP)
           ssh -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -o BatchMode=yes \
             -o ConnectTimeout=30 \
-            ${{ secrets.DEPLOY_NODE_USER }}@localhost << 'DEPLOY_EOF'
+            ${{ secrets.DEPLOY_NODE_USER }}@${{ secrets.DEPLOY_NODE_ADDR }} << 'DEPLOY_EOF'
 
             set -e
 
             echo "=== Starting deployment on dev server ==="
             echo "Working directory: ${{ secrets.DEPLOY_NODE_PATH }}"
 
-            # Change to project directory
             cd ${{ secrets.DEPLOY_NODE_PATH }}
 
-            # Pull latest images
             echo "=== Pulling latest images ==="
             docker-compose -f docker-compose.test.yml pull
 
-            # Update image tags to current sha
-            echo "=== Updating image tags ==="
-            docker-compose -f docker-compose.test.yml \
-              pull backend_test frontend_test
+            echo "=== Tagging images ==="
             docker tag ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.sha }}-backend \
               $(docker-compose -f docker-compose.test.yml config | grep 'image:' | head -1 | awk '{print $2}' | sed 's/_test//')
             docker tag ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.sha }}-frontend \
               $(docker-compose -f docker-compose.test.yml config | grep 'image:' | tail -1 | awk '{print $2}' | sed 's/_test//')
 
-            # Stop existing containers
             echo "=== Stopping existing containers ==="
             docker-compose -f docker-compose.test.yml down || true
 
-            # Start services
             echo "=== Starting services ==="
             docker-compose -f docker-compose.test.yml up -d
 
-            # Wait for services to be healthy
             echo "=== Waiting for services to be healthy ==="
             for i in {1..60}; do
               if docker-compose -f docker-compose.test.yml ps | grep -q "healthy"; then
@@ -176,6 +152,3 @@ jobs:
 
             echo "Deployment completed!"
           DEPLOY_EOF
-
-          # Cleanup: kill cloudflared tunnel
-          kill $CF_PID || true
