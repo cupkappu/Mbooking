@@ -57,10 +57,11 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
 
       - name: Setup Cloudflare WARP
-        uses: furykerry/setup-cloudflare-warp@master
+        uses: Boostport/setup-cloudflare-warp@v1
         with:
-          cloudflare_warp_version: 2024.11.0
-          api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          organization: ${{ secrets.CLOUDFLARE_ORG }}
+          auth_client_id: ${{ secrets.CLOUDFLARE_AUTH_CLIENT_ID }}
+          auth_client_secret: ${{ secrets.CLOUDFLARE_AUTH_CLIENT_SECRET }}
 
       - name: Connect to private network via WARP
         run: |

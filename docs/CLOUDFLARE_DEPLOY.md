@@ -24,28 +24,31 @@ GitHub Actions                      Cloudflare Zero Trust           Dev Server
 
 ## Step 1: Configure Cloudflare Zero Trust
 
-### 1.1 Create API Token
+### 1.1 Create Service Token
 
-1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. Navigate to **My Profile** > **API Tokens**
-3. Create a new token with:
-   - **Permissions**: `Account` > `WARP` > `Edit`
-   - **Account**: Your Cloudflare account
-4. Copy the token
+1. Go to [Cloudflare Zero Trust](https://one.dash.cloudflare.com/)
+2. Navigate to **Access** > **Service Auth**
+3. Click **Create Service Token**
+4. Configure:
+   - **Name**: `github-actions-deploy`
+   - **Service Token Duration**: As needed
+5. Copy the `Client ID` and `Client Secret`
+6. **Important**: Save the secret - it won't be shown again!
 
-### 1.2 Configure WARP Settings
+### 1.2 Get Organization Name
 
-1. Go to **Zero Trust** > **Settings** > **WARP**
-2. Enable **Browser Access** or **WARP client**
-3. Configure device settings as needed
+1. Go to **Settings** > **General**
+2. Copy the **Organization name** (e.g., `mycompany`)
 
-### 1.3 Create Enrollment Policy (Optional)
+### 1.3 Create Enrollment Policy
 
 1. Go to **Devices** > **Enrollment**
-2. Create a policy to allow GitHub Actions IPs:
-   - Action: Allow
-   - Selector: IP range
-   - Value: GitHub Actions IP ranges
+2. Click **Add a policy**
+3. Configure:
+   - **Name**: `Allow GitHub Actions`
+   - **Action**: Service Auth
+   - **Selector**: Service Token
+   - **Value**: Select your service token `github-actions-deploy`
 
 ## Step 2: Prepare Dev Server
 
@@ -88,7 +91,9 @@ Go to **Settings > Secrets and variables > Actions**:
 
 | Secret | Description | Example |
 |--------|-------------|---------|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API token | `abc123...` |
+| `CLOUDFLARE_ORG` | Zero Trust organization name | `mycompany` |
+| `CLOUDFLARE_AUTH_CLIENT_ID` | Service token Client ID | `abc123...` |
+| `CLOUDFLARE_AUTH_CLIENT_SECRET` | Service token Client Secret | `xyz789...` |
 | `DEPLOY_NODE_USER` | SSH username | `deploy` |
 | `DEPLOY_NODE_ADDR` | Server IP (private network) | `192.168.1.100` |
 | `DEPLOY_NODE_PATH` | Project directory | `/opt/multi-currency-accounting` |
@@ -125,8 +130,8 @@ curl -L -o /tmp/cloudflared.deb \
   https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
 sudo dpkg -i /tmp/cloudflared.deb
 
-# Connect to WARP
-export CLOUDFLARE_API_TOKEN=your-token
+# Connect to WARP using service token
+warp-cli login --organization-name mycompany --auth-client-id abc123... --auth-client-secret xyz789...
 warp-cli connect
 
 # SSH to dev server
