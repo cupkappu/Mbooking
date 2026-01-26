@@ -1,0 +1,81 @@
+# Codemap Generation Report
+
+Generated: 2026-01-27T00:00:00.000Z
+
+## Status: INITIAL GENERATION
+
+This is the initial generation of codemap files for the multi_currency_accounting codebase.
+
+## Files Generated
+
+| File | Size | Description |
+|------|------|-------------|
+| codemaps/architecture.md | 7.5 KB | Project overview, architecture diagrams, module relationships |
+| codemaps/backend.md | 6.8 KB | NestJS module structure, entities, services, controllers, DTOs |
+| codemaps/frontend.md | 9.7 KB | Next.js App Router structure, route groups, hooks, components |
+| codemaps/data.md | 12.7 KB | TypeORM entities, database schema, relationships, patterns |
+
+## Summary
+
+### Backend Modules Identified (14 total)
+
+| Module | Purpose |
+|--------|---------|
+| AuthModule | JWT authentication, user management |
+| TenantsModule | Multi-tenant context, settings |
+| AccountsModule | Chart of accounts (tree structure) |
+| JournalModule | Journal entries and lines |
+| QueryModule | Balance queries, summaries |
+| RatesModule | Exchange rates, rate providers |
+| ProvidersModule | Currency data provider management |
+| SchedulerModule | Cron job scheduling |
+| BudgetsModule | Budgets, alerts, templates |
+| ReportsModule | Report generation and storage |
+| CurrenciesModule | Currency CRUD |
+| AdminModule | System admin, audit logs |
+| SetupModule | System initialization |
+| ExportModule | Data export functionality |
+
+### Frontend Route Groups Identified (4 total)
+
+| Route Group | Purpose |
+|-------------|---------|
+| (auth) | Login, Register, OAuth callbacks |
+| (dashboard) | Main application (Dashboard, Accounts, Journal, Budgets, Reports, Settings) |
+| (setup) | Initial system setup |
+| admin | Administration panel |
+
+### Entities Identified (12 total)
+
+| Entity | Table | Key Features |
+|--------|-------|--------------|
+| User | users | Auth, tenant association, roles |
+| Tenant | tenants | Multi-tenant, settings (jsonb) |
+| Account | accounts | Tree structure, materialized path |
+| JournalEntry | journal_entries | Transaction headers |
+| JournalLine | journal_lines | Transaction lines, decimal amounts |
+| Currency | currencies | ISO 4217 currencies |
+| Budget | budgets | Periodic/non-periodic, alerts |
+| ExchangeRate | exchange_rates | Multi-currency rates, indexed |
+| Provider | providers | REST API, JS plugin types |
+| AuditLog | admin_audit_logs | Action tracking, IP logging |
+
+### Key Architecture Patterns
+
+1. **Multi-tenancy**: JWT-based tenant extraction, TenantContext for async storage
+2. **Soft Deletes**: All entities use `deleted_at` column
+3. **Money Handling**: All amounts use `decimal` type (never float)
+4. **API Proxy**: Next.js `/api/v1/*` routes proxy to NestJS backend
+5. **State Management**: React Query for server state
+6. **Tree Accounts**: Materialized path pattern for hierarchical accounts
+
+## Verification
+
+```bash
+# All codemap files created successfully
+ls -la codemaps/
+# architecture.md
+# backend.md
+# frontend.md
+# data.md
+```
