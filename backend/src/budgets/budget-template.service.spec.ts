@@ -138,11 +138,12 @@ describe('BudgetTemplateService', () => {
       it('should throw error when template not found', async () => {
         templateRepository.findOne.mockResolvedValue(null);
 
-        await expect(
-          runWithTenant('tenant-1', () => 
-            service.updateTemplate('not-found', 'tenant-1', { name: 'Test' }),
-          ),
-        ).rejects.toThrow();
+        const result = await runWithTenant('tenant-1', () =>
+          service.updateTemplate('not-found', 'tenant-1', { name: 'Test' }),
+        );
+
+        // updateTemplate returns null when template not found
+        expect(result).toBeNull();
       });
     });
 
@@ -150,13 +151,11 @@ describe('BudgetTemplateService', () => {
       it('should reject deletion of system template', async () => {
         templateRepository.findOne.mockResolvedValue(mockSystemTemplate);
 
-        const result = await runWithTenant('tenant-1', () => 
-          service.deleteTemplate('template-1', 'tenant-1'),
-        );
-
-        expect(result).toBe(false);
-        // save should not be called for system templates
-        expect(templateRepository.save).not.toHaveBeenCalled();
+        await expect(
+          runWithTenant('tenant-1', () =>
+            service.deleteTemplate('template-1', 'tenant-1'),
+          ),
+        ).rejects.toThrow('Cannot delete system templates');
       });
 
       it('should allow deletion of custom template', async () => {
@@ -193,15 +192,17 @@ describe('BudgetTemplateService', () => {
     describe('listTemplates', () => {
       it('should return both system and custom templates by default', async () => {
         const mockQueryBuilder = {
+          where: jest.fn().mockReturnThis(),
           andWhere: jest.fn().mockReturnThis(),
           orderBy: jest.fn().mockReturnThis(),
+          addOrderBy: jest.fn().mockReturnThis(),
           skip: jest.fn().mockReturnThis(),
           take: jest.fn().mockReturnThis(),
           getManyAndCount: jest.fn().mockResolvedValue([[mockSystemTemplate, mockCustomTemplate], 2]),
         };
         templateRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
-        const result = await runWithTenant('tenant-1', () => 
+        const result = await runWithTenant('tenant-1', () =>
           service.listTemplates('tenant-1'),
         );
 
@@ -212,15 +213,17 @@ describe('BudgetTemplateService', () => {
 
       it('should filter out system templates when includeSystem is false', async () => {
         const mockQueryBuilder = {
+          where: jest.fn().mockReturnThis(),
           andWhere: jest.fn().mockReturnThis(),
           orderBy: jest.fn().mockReturnThis(),
+          addOrderBy: jest.fn().mockReturnThis(),
           skip: jest.fn().mockReturnThis(),
           take: jest.fn().mockReturnThis(),
           getManyAndCount: jest.fn().mockResolvedValue([[mockCustomTemplate], 1]),
         };
         templateRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
-        const result = await runWithTenant('tenant-1', () => 
+        const result = await runWithTenant('tenant-1', () =>
           service.listTemplates('tenant-1', { includeSystem: false }),
         );
 
@@ -230,15 +233,17 @@ describe('BudgetTemplateService', () => {
 
       it('should order system templates first', async () => {
         const mockQueryBuilder = {
+          where: jest.fn().mockReturnThis(),
           andWhere: jest.fn().mockReturnThis(),
           orderBy: jest.fn().mockReturnThis(),
+          addOrderBy: jest.fn().mockReturnThis(),
           skip: jest.fn().mockReturnThis(),
           take: jest.fn().mockReturnThis(),
           getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
         };
         templateRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
-        await runWithTenant('tenant-1', () => 
+        await runWithTenant('tenant-1', () =>
           service.listTemplates('tenant-1'),
         );
 

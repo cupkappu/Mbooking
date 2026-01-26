@@ -14,6 +14,7 @@ import { QueryService } from '../query/query.service';
 import { CurrenciesService } from '../currencies/currencies.service';
 import { RateGraphEngine } from '../rates/rate-graph-engine';
 import { TenantsService } from '../tenants/tenants.service';
+import { BudgetProgressService } from '../budgets/services/budget-progress.service';
 
 // Helper for running tests with tenant context
 const runWithTenant = <T>(tenantId: string, callback: () => T): T => {
@@ -88,6 +89,12 @@ describe('JournalService', () => {
           provide: TenantsService,
           useValue: {
             findById: jest.fn(),
+          },
+        },
+        {
+          provide: BudgetProgressService,
+          useValue: {
+            onJournalEntryCreated: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],

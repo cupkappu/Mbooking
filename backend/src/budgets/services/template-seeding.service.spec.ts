@@ -33,14 +33,14 @@ describe('TemplateSeedingService', () => {
     category: TemplateCategory.PERSONAL,
     is_system_template: true,
     is_active: true,
-    account_pattern: '' as unknown as null,
+    account_pattern: '',
     account_type: 'expense',
     default_period_type: 'monthly' as any,
     default_amount: 0,
     default_currency: 'USD',
     default_alert_threshold: 80,
     suggested_categories: ['Housing', 'Utilities'],
-    metadata: {} as unknown as null,
+    metadata: {},
     created_at: new Date(),
     updated_at: new Date(),
   };
@@ -95,7 +95,7 @@ describe('TemplateSeedingService', () => {
       templateRepository.findOne.mockImplementation(() => {
         callCount++;
         // First call returns null (create), rest return existing (skip)
-        return callCount === 1 ? null : mockTemplate;
+        return Promise.resolve(callCount === 1 ? null : mockTemplate);
       });
       templateRepository.create.mockImplementation((data) => data as BudgetTemplate);
       templateRepository.save.mockResolvedValue(mockTemplate);

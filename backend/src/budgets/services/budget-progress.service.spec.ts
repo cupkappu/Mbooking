@@ -233,7 +233,8 @@ describe('BudgetProgressService', () => {
 
   describe('onJournalEntryCreated', () => {
     it('should update cache for affected budgets', async () => {
-      budgetRepository.findOne.mockResolvedValue(mockBudget);
+      // Mock find to return budgets associated with the account
+      budgetRepository.find.mockResolvedValue([mockBudget]);
       queryService.getBalances.mockResolvedValue({
         balances: [{
           account: { id: 'account-1' } as any,
@@ -247,17 +248,17 @@ describe('BudgetProgressService', () => {
         { account_id: 'account-1', amount: -500, currency: 'HKD' },
       ];
 
-      await runWithTenant('tenant-1', () => 
+      await runWithTenant('tenant-1', () =>
         service.onJournalEntryCreated(journalLines as any),
       );
 
       const cached = service.getCachedProgress('uuid-1');
       expect(cached).not.toBeNull();
-      expect(cached?.spentAmount).toBeGreaterThan(2500);
+      expect(cached?.spentAmount).toBeGreaterThan(mockBudget.spent_amount);
     });
 
     it('should handle empty journal lines', async () => {
-      await runWithTenant('tenant-1', () => 
+      await runWithTenant('tenant-1', () =>
         service.onJournalEntryCreated([]),
       );
 

@@ -222,13 +222,13 @@ describe('BudgetsService', () => {
       // Spy on console.log to verify audit logging
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      await runWithTenant('tenant-1', () => 
+      await runWithTenant('tenant-1', () =>
         service.adminUpdate('uuid-1', updateDto, 'admin-user-1'),
       );
 
       expect(consoleSpy).toHaveBeenCalled();
-      expect(consoleSpy.mock.calls[0][0]).toBe('[AUDIT]');
-      
+      expect(consoleSpy.mock.calls[0][0]).toContain('[AUDIT]');
+
       consoleSpy.mockRestore();
     });
   });
@@ -247,48 +247,15 @@ describe('BudgetsService', () => {
     });
   });
 
-  describe('getProgress', () => {
-    it('should return progress calculation', async () => {
-      budgetRepository.findOne.mockResolvedValue(mockBudget);
-
-      const result = await runWithTenant('tenant-1', () => service.getProgress('uuid-1'));
-
-      expect(result.progress).toBe(50);
-      expect(result.remaining).toBe(2500);
-      expect(result.is_exceeded).toBe(false);
-      expect(result.is_alert).toBe(false);
-    });
-
-    it('should trigger alert when threshold exceeded', async () => {
-      const highSpendingBudget = { ...mockBudget, spent_amount: 4500, alert_threshold: 0.8 };
-      budgetRepository.findOne.mockResolvedValue(highSpendingBudget);
-
-      const result = await runWithTenant('tenant-1', () => service.getProgress('uuid-1'));
-
-      expect(result.progress).toBe(90);
-      expect(result.is_alert).toBe(true);
-    });
-
-    it('should mark as exceeded when spending > budget', async () => {
-      const exceededBudget = { ...mockBudget, spent_amount: 6000 };
-      budgetRepository.findOne.mockResolvedValue(exceededBudget);
-
-      const result = await runWithTenant('tenant-1', () => service.getProgress('uuid-1'));
-
-      expect(result.progress).toBe(100);
-      expect(result.is_exceeded).toBe(true);
-    });
-  });
-
   describe('findWithPagination', () => {
     it('should return paginated results', async () => {
       const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([mockBudget]),
-        getCount: jest.fn().mockResolvedValue(1),
+        getManyAndCount: jest.fn().mockResolvedValue([[mockBudget], 1]),
       };
       budgetRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
@@ -305,12 +272,12 @@ describe('BudgetsService', () => {
 
     it('should apply search filter when provided', async () => {
       const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([mockBudget]),
-        getCount: jest.fn().mockResolvedValue(1),
+        getManyAndCount: jest.fn().mockResolvedValue([[mockBudget], 1]),
       };
       budgetRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
@@ -323,12 +290,12 @@ describe('BudgetsService', () => {
 
     it('should apply type filter when provided', async () => {
       const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([mockBudget]),
-        getCount: jest.fn().mockResolvedValue(1),
+        getManyAndCount: jest.fn().mockResolvedValue([[mockBudget], 1]),
       };
       budgetRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 

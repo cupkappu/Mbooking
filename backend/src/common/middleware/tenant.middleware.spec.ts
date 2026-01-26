@@ -9,9 +9,9 @@ describe('TenantMiddleware', () => {
     middleware = new TenantMiddleware(dataSource as any);
   });
 
-  test('allows /api/v1/test when DB is empty', async () => {
+  test('allows /api/v1/setup when DB is empty', async () => {
     dataSource.query.mockResolvedValue([{ count: '0' }]);
-    const req: any = { path: '/api/v1/test', headers: {} };
+    const req: any = { path: '/api/v1/setup', headers: {} };
     const res: any = { status: jest.fn().mockReturnThis(), json: jest.fn(), redirect: jest.fn() };
     const next = jest.fn();
 
