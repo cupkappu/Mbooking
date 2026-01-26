@@ -91,16 +91,16 @@ jobs:
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE }}:\${FRONTEND_TAG}-frontend || true
 
             echo "=== Stopping existing containers ==="
-            BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker-compose -f docker-compose.prod.yml down || true
+            BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker compose -f docker-compose.prod.yml down || true
 
             echo "=== Starting services ==="
-            BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker-compose -f docker-compose.prod.yml up -d
+            BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker compose -f docker-compose.prod.yml up -d
 
             echo "=== Waiting for services to be healthy ==="
             for i in {1..60}; do
-              if docker-compose -f docker-compose.prod.yml ps | grep -q "healthy"; then
+              if docker compose -f docker-compose.prod.yml ps | grep -q "healthy"; then
                 echo "All services are healthy!"
-                docker-compose -f docker-compose.prod.yml ps
+                docker compose -f docker-compose.prod.yml ps
                 exit 0
               fi
               echo "Waiting for services... (\$i/60)"
@@ -108,7 +108,7 @@ jobs:
             done
 
             echo "Deployment completed (timeout reached)"
-            docker-compose -f docker-compose.prod.yml ps
+            docker compose -f docker-compose.prod.yml ps
           EOF
 
       - name: Disconnect Tailscale
