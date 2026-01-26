@@ -54,7 +54,6 @@ async function proxyRequest(request: NextRequest, path: string[]) {
       body: request.body,
       cache: 'no-store',
       redirect: 'manual',
-      duplex: 'half',
     });
 
     const responseHeaders = new Headers();

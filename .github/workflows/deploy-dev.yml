@@ -66,6 +66,12 @@ jobs:
 
       - name: Deploy via SSH
         run: |
+          scp -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o BatchMode=yes \
+            -o ConnectTimeout=30 \
+            docker-compose.prod.yml \
+            ${{ secrets.DEPLOY_NODE_USER }}@${{ secrets.DEPLOY_NODE_ADDR }}:${{ secrets.DEPLOY_NODE_PATH }}/docker-compose.prod.yml
           # SSH directly to dev server IP (now reachable through Tailscale)
           ssh -T -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
