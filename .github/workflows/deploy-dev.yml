@@ -1,5 +1,5 @@
-# Cloudflare WARP SSH Deployment
-# Connects to private network via Cloudflare Zero Trust WARP, then SSH to dev server
+# Tailscale SSH Deployment
+# Connects to private network via Tailscale, then SSH to dev server
 #
 # Triggers:
 # - Manual: workflow_dispatch (GitHub Actions UI)
@@ -77,7 +77,7 @@ jobs:
       - name: Deploy via SSH
         run: |
           # SSH directly to dev server IP (now reachable through Tailscale)
-          ssh -o StrictHostKeyChecking=no \
+          ssh -T -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -o BatchMode=yes \
             -o ConnectTimeout=30 \
