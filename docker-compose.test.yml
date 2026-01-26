@@ -47,6 +47,11 @@ services:
     depends_on:
       postgres_test:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3001/api/v1/setup/status || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   # Frontend service - test configuration
@@ -58,7 +63,8 @@ services:
     ports:
       - "8068:3000"
     depends_on:
-      - backend_test    # Wait for backend to be ready before starting
+      backend_test:
+        condition: service_healthy    # Wait for backend to be healthy before starting
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://backend_test:3001

@@ -7,13 +7,14 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from './user.entity';
-import { TenantsService } from '../tenants/tenants.service';
 import { Tenant } from '../tenants/tenant.entity';
+import { TenantsModule } from '../tenants/tenants.module';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     TypeOrmModule.forFeature([User, Tenant]),
+    TenantsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -24,7 +25,7 @@ import { Tenant } from '../tenants/tenant.entity';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, TenantsService],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

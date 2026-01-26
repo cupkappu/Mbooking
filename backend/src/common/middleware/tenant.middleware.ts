@@ -104,20 +104,9 @@ export class TenantMiddleware implements NestMiddleware {
       return next();
     }
 
-    TenantContext.run({ tenantId, userId, requestId }, async () => {
-      await this.setPostgresContext();
+    TenantContext.run({ tenantId, userId, requestId }, () => {
       next();
     });
-  }
-
-  private async setPostgresContext(): Promise<void> {
-    const tenantId = TenantContext.tenantId;
-    if (tenantId) {
-      await this.dataSource.query(
-        `SELECT set_config('app.current_tenant_id', $1, false)`,
-        [tenantId]
-      );
-    }
   }
 
   private getRequestId(req: Request): string {

@@ -96,9 +96,8 @@ start_docker_environment() {
     while [ $attempt -lt $max_attempts ]; do
         # 检查 PostgreSQL 是否就绪
         if docker exec mca_postgres_test pg_isready -U test -d test_db &>/dev/null; then
-            # 检查后端是否响应
-            if curl -s http://localhost:8067/api/health &>/dev/null || \
-               curl -s http://localhost:8067/api/docs &>/dev/null; then
+            # 检查后端是否响应 (正确端点)
+            if curl -s http://localhost:8067/api/v1/setup/status &>/dev/null; then
                 break
             fi
         fi

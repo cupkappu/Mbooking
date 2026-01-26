@@ -1,0 +1,79 @@
+# Dependabot configuration for automated dependency updates
+#
+# This configuration ensures dependencies are regularly updated
+# with security patches and version upgrades.
+
+version: 2
+updates:
+  # Enable version updates for npm packages
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Hong_Kong"
+    # Group related updates together
+    groups:
+      # Security updates - always critical priority
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      # Minor frontend dependencies together
+      frontend-minor:
+        applies-to: version-updates
+        dependency-type: "indirect"
+        patterns:
+          - "@radix-ui/*"
+          - "lucide-react"
+          - "date-fns"
+      # Backend framework updates together
+      backend-minor:
+        applies-to: version-updates
+        dependency-type: "indirect"
+        patterns:
+          - "@nestjs/*"
+          - "typeorm"
+    # Allow up to 10 open pull requests at once
+    open-pull-requests-limit: 10
+    # Labels for PR categorization
+    labels:
+      - "dependencies"
+      - "npm"
+    # Assign reviewers
+    reviewers:
+      - "team-leads"
+    # Commit message prefix
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    # Ignore specific versions if needed
+    ignore: []
+    # Automatically rebase PRs
+    rebase-strategy: "auto"
+
+  # Docker image updates
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"
+
+  # GitHub Actions updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci)"

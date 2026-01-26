@@ -17,6 +17,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV JSON_LOGS=true
 
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
 # Create non-root user with unique UID (avoid conflicts)
 # Use high UID to avoid conflicts with host users
 RUN addgroup --system --gid 99999 appgroup && \
