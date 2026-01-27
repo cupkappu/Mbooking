@@ -118,10 +118,6 @@ jobs:
             docker compose -f docker-compose.prod.yml ps
           EOF
 
-      - name: Disconnect Tailscale
-        if: always()
-        run: tailscale down || true
-
       - name: Send notification to n8n
         if: always()
         run: |
@@ -130,8 +126,21 @@ jobs:
             STATUS="failed"
           fi
 
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -u "${{ secrets.N8N_USERNAME }}:${{ secrets.N8N_PASSWORD }}" \
-            -d '{"notification": "Dev deployment #${{ github.run_number }} for commit ${{ github.sha }} has '"$STATUS"'.\nRepository: ${{ github.repository }}\nTriggered by: ${{ github.event_name }}\nLink: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
-            "${{ secrets.N8N_WEBHOOK_URL }}"
+          # Send notification via deployment server (which has Tailscale access)
+          ssh -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o BatchMode=yes \
+            -o ConnectTimeout=30 \
+            ${{ secrets.DEPLOY_NODE_USER }}@${{ secrets.DEPLOY_NODE_ADDR }} << SSHEOF
+            set -e
+
+            curl -X POST \
+              -H "Content-Type: application/json" \
+              -u "${{ secrets.N8N_USERNAME }}:${{ secrets.N8N_PASSWORD }}" \
+              -d '{"notification": "Dev deployment #${{ github.run_number }} for commit ${{ github.sha }} has '${STATUS}'.\nRepository: ${{ github.repository }}\nTriggered by: ${{ github.event_name }}\nLink: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+              "${{ secrets.N8N_WEBHOOK_URL }}"
+          SSHEOF
+
+      - name: Disconnect Tailscale
+        if: always()
+        run: tailscale down || true
