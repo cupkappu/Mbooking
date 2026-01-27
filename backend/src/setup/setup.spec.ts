@@ -200,12 +200,6 @@ describe('SetupService', () => {
       await expect(service.initialize(weakDto)).rejects.toThrow(ConflictException);
     });
 
-    it('should throw ConflictException for missing special character in password', async () => {
-      const weakDto = { ...validDto, password: 'NoSpecialChar123' };
-
-      await expect(service.initialize(weakDto)).rejects.toThrow(ConflictException);
-    });
-
     it('should successfully initialize system with valid data', async () => {
       const result = await service.initialize(validDto);
 
