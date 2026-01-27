@@ -26,7 +26,7 @@ services:
 
   # Backend service - uses pre-built image from GHCR
   backend_test:
-    image: ghcr.io/${GITHUB_REPOSITORY:-org/repo}:${BACKEND_TAG:-latest}-backend
+    image: ghcr.io/${GITHUB_REPOSITORY:-org/repo}:${BACKEND_TAG:-master}-backend
     container_name: mca_backend_test
     environment:
       DATABASE_HOST: postgres_test
@@ -53,7 +53,7 @@ services:
 
   # Frontend service - uses pre-built image from GHCR
   frontend_test:
-    image: ghcr.io/${GITHUB_REPOSITORY:-org/repo}:${FRONTEND_TAG:-latest}-frontend
+    image: ghcr.io/${GITHUB_REPOSITORY:-org/repo}:${FRONTEND_TAG:-master}-frontend
     container_name: mca_frontend_test
     ports:
       - "8068:3000"

@@ -106,10 +106,10 @@ jobs:
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE }}:\${FRONTEND_TAG}-frontend || true
 
             echo "=== Stopping existing containers ==="
-            BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker compose -f docker-compose.prod.yml down || true
+            GITHUB_REPOSITORY=${{ env.REGISTRY }} BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker compose -f docker-compose.prod.yml down || true
 
             echo "=== Starting services ==="
-            BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker compose -f docker-compose.prod.yml up -d
+            GITHUB_REPOSITORY=${{ env.REGISTRY }} BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker compose -f docker-compose.prod.yml up -d
 
             echo "=== Waiting for services to be healthy ==="
             for i in {1..60}; do
