@@ -348,8 +348,9 @@ export function useAvailablePlugins() {
   return useQuery({
     queryKey: ['admin-plugins-list'],
     queryFn: async () => {
-      const response = await apiClient.get<{ plugins: Plugin[] }>('/admin/plugins');
-      return response.plugins
+      // API client already extracts data.data, so response is the plugins array directly
+      const plugins = await apiClient.get<Plugin[]>('/admin/plugins');
+      return plugins
         .filter(p => p.status === 'loaded' || p.status === 'unloaded')
         .map(p => ({ name: p.name, file_path: p.file_path }));
     },

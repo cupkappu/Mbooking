@@ -22,89 +22,6 @@ export class BudgetsController {
     private templateService: BudgetTemplateService,
   ) {}
 
-  @Get()
-  @ApiOperation({ summary: '获取预算列表（分页）' })
-  @ApiQuery({ name: 'offset', required: false, description: '分页偏移量，默认0', example: 0 })
-  @ApiQuery({ name: 'limit', required: false, description: '每页数量，默认20', example: 20 })
-  @ApiQuery({ name: 'is_active', required: false, description: '是否只返回激活的预算', example: true })
-  @ApiQuery({ name: 'status', required: false, description: '预算状态过滤', example: 'active' })
-  @ApiQuery({ name: 'type', required: false, description: '预算类型过滤', example: 'periodic' })
-  @ApiQuery({ name: 'search', required: false, description: '搜索关键词', example: 'food' })
-  @ApiResponse({ status: 200, description: '成功返回预算列表（分页）' })
-  @ApiUnauthorizedResponse({ description: '未授权访问' })
-  async findAll(
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
-    @Query('is_active') is_active: string,
-    @Query('status') status: string,
-    @Query('type') type: string,
-    @Query('search') search: string,
-  ) {
-    const params: BudgetListParams = {
-      offset,
-      limit,
-      is_active: is_active === 'true' ? true : is_active === 'false' ? false : undefined,
-      status,
-      type,
-      search,
-    };
-    return this.budgetsService.findWithPagination(params);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: '根据ID获取预算详情' })
-  @ApiParam({ name: 'id', description: '预算ID', example: '550e8400-e29b-41d4-a716-446655440000' })
-  @ApiResponse({ status: 200, description: '成功返回预算详情' })
-  @ApiNotFoundResponse({ description: '预算不存在' })
-  @ApiUnauthorizedResponse({ description: '未授权访问' })
-  async findById(@Param('id') id: string) {
-    return this.budgetsService.findById(id);
-  }
-
-  @Get(':id/progress')
-  @ApiOperation({ summary: '获取预算执行进度' })
-  @ApiParam({ name: 'id', description: '预算ID', example: '550e8400-e29b-41d4-a716-446655440000' })
-  @ApiQuery({ name: 'target_currency', required: false, description: '目标货币代码', example: 'USD' })
-  @ApiResponse({ status: 200, description: '返回预算执行进度，包含已使用金额、剩余金额、使用百分比等' })
-  @ApiNotFoundResponse({ description: '预算不存在' })
-  @ApiUnauthorizedResponse({ description: '未授权访问' })
-  async getProgress(
-    @Param('id') id: string,
-    @Query('target_currency') target_currency?: string,
-  ) {
-    return this.budgetsService.getDetailedProgress(id, target_currency);
-  }
-
-  @Post()
-  @ApiOperation({ summary: '创建新预算' })
-  @ApiResponse({ status: 201, description: '预算创建成功' })
-  @ApiBadRequestResponse({ description: '请求参数验证失败' })
-  @ApiUnauthorizedResponse({ description: '未授权访问' })
-  async create(@Body() data: CreateBudgetDto) {
-    return this.budgetsService.create(data);
-  }
-
-  @Put(':id')
-  @ApiOperation({ summary: '更新预算信息' })
-  @ApiParam({ name: 'id', description: '预算ID', example: '550e8400-e29b-41d4-a716-446655440000' })
-  @ApiResponse({ status: 200, description: '预算更新成功' })
-  @ApiNotFoundResponse({ description: '预算不存在' })
-  @ApiBadRequestResponse({ description: '请求参数验证失败' })
-  @ApiUnauthorizedResponse({ description: '未授权访问' })
-  async update(@Param('id') id: string, @Body() data: UpdateBudgetDto) {
-    return this.budgetsService.update(id, data);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: '删除预算（软删除）' })
-  @ApiNoContentResponse({ description: '预算删除成功' })
-  @ApiNotFoundResponse({ description: '预算不存在' })
-  @ApiUnauthorizedResponse({ description: '未授权访问' })
-  async delete(@Param('id') id: string) {
-    await this.budgetsService.delete(id);
-    return { success: true };
-  }
-
   // Alert Management Endpoints
 
   @Get('alerts')
@@ -123,8 +40,8 @@ export class BudgetsController {
   ) {
     const result = await this.alertService.listAlerts(
       undefined, // tenantId will be extracted from context
-      { 
-        status: status as any, 
+      {
+        status: status as any,
         budgetId: budget_id,
         offset: page ? (page - 1) * (limit || 20) : 0,
         limit: limit || 20,
@@ -246,6 +163,89 @@ export class BudgetsController {
   async getMultiCurrencySummary(@Query('base_currency') base_currency?: string) {
     // This will be implemented by MultiCurrencyBudgetService
     return this.budgetsService.getMultiCurrencySummary(base_currency);
+  }
+
+  @Get()
+  @ApiOperation({ summary: '获取预算列表（分页）' })
+  @ApiQuery({ name: 'offset', required: false, description: '分页偏移量，默认0', example: 0 })
+  @ApiQuery({ name: 'limit', required: false, description: '每页数量，默认20', example: 20 })
+  @ApiQuery({ name: 'is_active', required: false, description: '是否只返回激活的预算', example: true })
+  @ApiQuery({ name: 'status', required: false, description: '预算状态过滤', example: 'active' })
+  @ApiQuery({ name: 'type', required: false, description: '预算类型过滤', example: 'periodic' })
+  @ApiQuery({ name: 'search', required: false, description: '搜索关键词', example: 'food' })
+  @ApiResponse({ status: 200, description: '成功返回预算列表（分页）' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async findAll(
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('is_active') is_active: string,
+    @Query('status') status: string,
+    @Query('type') type: string,
+    @Query('search') search: string,
+  ) {
+    const params: BudgetListParams = {
+      offset,
+      limit,
+      is_active: is_active === 'true' ? true : is_active === 'false' ? false : undefined,
+      status,
+      type,
+      search,
+    };
+    return this.budgetsService.findWithPagination(params);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: '根据ID获取预算详情' })
+  @ApiParam({ name: 'id', description: '预算ID', example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiResponse({ status: 200, description: '成功返回预算详情' })
+  @ApiNotFoundResponse({ description: '预算不存在' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async findById(@Param('id') id: string) {
+    return this.budgetsService.findById(id);
+  }
+
+  @Get(':id/progress')
+  @ApiOperation({ summary: '获取预算执行进度' })
+  @ApiParam({ name: 'id', description: '预算ID', example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiQuery({ name: 'target_currency', required: false, description: '目标货币代码', example: 'USD' })
+  @ApiResponse({ status: 200, description: '返回预算执行进度，包含已使用金额、剩余金额、使用百分比等' })
+  @ApiNotFoundResponse({ description: '预算不存在' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async getProgress(
+    @Param('id') id: string,
+    @Query('target_currency') target_currency?: string,
+  ) {
+    return this.budgetsService.getDetailedProgress(id, target_currency);
+  }
+
+  @Post()
+  @ApiOperation({ summary: '创建新预算' })
+  @ApiResponse({ status: 201, description: '预算创建成功' })
+  @ApiBadRequestResponse({ description: '请求参数验证失败' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async create(@Body() data: CreateBudgetDto) {
+    return this.budgetsService.create(data);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: '更新预算信息' })
+  @ApiParam({ name: 'id', description: '预算ID', example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiResponse({ status: 200, description: '预算更新成功' })
+  @ApiNotFoundResponse({ description: '预算不存在' })
+  @ApiBadRequestResponse({ description: '请求参数验证失败' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async update(@Param('id') id: string, @Body() data: UpdateBudgetDto) {
+    return this.budgetsService.update(id, data);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: '删除预算（软删除）' })
+  @ApiNoContentResponse({ description: '预算删除成功' })
+  @ApiNotFoundResponse({ description: '预算不存在' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async delete(@Param('id') id: string) {
+    await this.budgetsService.delete(id);
+    return { success: true };
   }
 
   // Variance Report Endpoint
