@@ -1,6 +1,6 @@
-import { Controller, Get, Query, UseGuards, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam, ApiQuery, ApiBadRequestResponse, ApiNotFoundResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
-import { RatesService } from './rates.service';
+import { Controller, Get, Post, Query, Body, UseGuards, NotFoundException, Param } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery, ApiParam, ApiBadRequestResponse, ApiNotFoundResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { RatesService } from './services/rate.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('汇率')
@@ -8,19 +8,21 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class RatesController {
   constructor(private ratesService: RatesService) {}
 
-  @Get('latest')
+  // ==================== 核心 API ====================
+
+  @Get(':from/:to')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取最新汇率' })
-  @ApiQuery({ name: 'from', required: true, description: '源货币代码（ISO 4217）', example: 'USD' })
-  @ApiQuery({ name: 'to', required: true, description: '目标货币代码（ISO 4217）', example: 'CNY' })
-  @ApiResponse({ status: 200, description: '成功返回最新汇率，包含买入价、卖出价、汇率值' })
+  @ApiParam({ name: 'from', description: '源货币代码 (ISO 4217)', example: 'USD' })
+  @ApiParam({ name: 'to', description: '目标货币代码 (ISO 4217)', example: 'CNY' })
+  @ApiResponse({ status: 200, description: '成功返回汇率' })
   @ApiBadRequestResponse({ description: '缺少必需的货币代码参数' })
-  @ApiNotFoundResponse({ description: '汇率不存在，请配置汇率提供商' })
+  @ApiNotFoundResponse({ description: '汇率不存在' })
   @ApiUnauthorizedResponse({ description: '未授权访问' })
   async getLatestRate(
-    @Query('from') from: string,
-    @Query('to') to: string,
+    @Param('from') from: string,
+    @Param('to') to: string,
   ) {
     if (!from || !to) {
       throw new NotFoundException('Both "from" and "to" currency codes are required');
@@ -38,100 +40,88 @@ export class RatesController {
     return rate;
   }
 
-  @Get('history')
+  @Get(':from/:to/:date')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '获取汇率历史记录' })
-  @ApiQuery({ name: 'from', required: true, description: '源货币代码', example: 'USD' })
-  @ApiQuery({ name: 'to', required: true, description: '目标货币代码', example: 'CNY' })
-  @ApiQuery({ name: 'from_date', required: false, description: '开始日期', example: '2024-01-01' })
-  @ApiQuery({ name: 'to_date', required: false, description: '结束日期', example: '2024-01-31' })
-  @ApiQuery({ name: 'limit', required: false, description: '返回记录数量限制，默认100', example: 100 })
-  @ApiResponse({ status: 200, description: '成功返回汇率历史记录列表' })
-  @ApiBadRequestResponse({ description: '缺少必需的货币代码参数' })
+  @ApiOperation({ summary: '获取指定日期的汇率' })
+  @ApiParam({ name: 'from', description: '源货币代码', example: 'USD' })
+  @ApiParam({ name: 'to', description: '目标货币代码', example: 'CNY' })
+  @ApiParam({ name: 'date', description: '日期 (YYYY-MM-DD)', example: '2026-01-27' })
+  @ApiResponse({ status: 200, description: '成功返回指定日期的汇率' })
+  @ApiBadRequestResponse({ description: '日期格式无效' })
   @ApiUnauthorizedResponse({ description: '未授权访问' })
-  async getRateHistory(
-    @Query('from') from: string,
-    @Query('to') to: string,
-    @Query('from_date') fromDate?: string,
-    @Query('to_date') toDate?: string,
-    @Query('limit') limit?: number,
+  async getRateAtDate(
+    @Param('from') from: string,
+    @Param('to') to: string,
+    @Param('date') date: string,
   ) {
-    return this.ratesService.getRateHistory(from, to, {
-      fromDate: fromDate ? new Date(fromDate) : undefined,
-      toDate: toDate ? new Date(toDate) : undefined,
-      limit: limit ? Number(limit) : undefined,
-    });
+    const rate = await this.ratesService.getRateAtDate(from, to, date);
+    
+    if (!rate) {
+      throw new NotFoundException(`Rate not found for ${from}/${to} on ${date}`);
+    }
+    
+    return rate;
   }
 
-  @Get('trend')
+  @Post('convert')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '获取汇率趋势分析' })
-  @ApiQuery({ name: 'from', required: true, description: '源货币代码', example: 'USD' })
-  @ApiQuery({ name: 'to', required: true, description: '目标货币代码', example: 'CNY' })
-  @ApiQuery({ name: 'days', required: false, description: '分析天数，默认30天', example: 30 })
-  @ApiResponse({ status: 200, description: '返回汇率趋势分析，包含最高价、最低价、均价、涨跌幅等' })
-  @ApiBadRequestResponse({ description: '缺少必需的货币代码参数' })
-  @ApiUnauthorizedResponse({ description: '未授权访问' })
-  async getRateTrend(
-    @Query('from') from: string,
-    @Query('to') to: string,
-    @Query('days') days?: number,
-  ) {
-    return this.ratesService.getRateTrend(from, to, days ? Number(days) : 30);
-  }
-
-  @Get('convert')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '货币金额转换' })
-  @ApiQuery({ name: 'amount', required: true, description: '要转换的金额', example: 100 })
-  @ApiQuery({ name: 'from', required: true, description: '源货币代码', example: 'USD' })
-  @ApiQuery({ name: 'to', required: true, description: '目标货币代码', example: 'CNY' })
-  @ApiResponse({ status: 200, description: '返回转换结果，包含源金额、目标金额、使用的汇率等' })
-  @ApiBadRequestResponse({ description: '缺少必需的参数' })
-  @ApiNotFoundResponse({ description: '汇率不存在，请配置汇率提供商' })
+  @ApiOperation({ summary: '货币转换' })
+  @ApiResponse({ status: 200, description: '返回转换结果' })
   @ApiUnauthorizedResponse({ description: '未授权访问' })
   async convert(
-    @Query('amount') amount: number,
-    @Query('from') from: string,
-    @Query('to') to: string,
+    @Body() body: { amount: number; from: string; to: string; date?: string }
   ) {
-    if (!from || !to) {
+    if (!body.from || !body.to) {
       throw new NotFoundException('Both "from" and "to" currency codes are required');
     }
     
-    const result = await this.ratesService.convert(amount, from, to);
-    
-    if (!result) {
-      throw new NotFoundException(
-        `Exchange rate not available for ${from.toUpperCase()}/${to.toUpperCase()}. ` +
-        'Please configure a rate provider in Admin > Providers.'
-      );
-    }
-    
-    return result;
+    return this.ratesService.convert(body);
   }
 
-  @Get('paths')
+  // ==================== 历史记录 ====================
+
+  @Get(':from/:to/history')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '获取货币转换路径' })
-  @ApiQuery({ name: 'from', required: true, description: '源货币代码', example: 'USD' })
-  @ApiQuery({ name: 'to', required: true, description: '目标货币代码', example: 'JPY' })
-  @ApiResponse({ status: 200, description: '返回可用的货币转换路径列表' })
-  @ApiBadRequestResponse({ description: '缺少必需的货币代码参数' })
+  @ApiOperation({ summary: '获取汇率历史' })
+  @ApiParam({ name: 'from', description: '源货币代码' })
+  @ApiParam({ name: 'to', description: '目标货币代码' })
+  @ApiQuery({ name: 'fromDate', required: false, description: '开始日期' })
+  @ApiQuery({ name: 'toDate', required: false, description: '结束日期' })
+  @ApiQuery({ name: 'limit', required: false, description: '返回数量限制' })
+  @ApiResponse({ status: 200, description: '返回历史记录' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async getRateHistory(
+    @Param('from') from: string,
+    @Param('to') to: string,
+    @Query() query: { fromDate?: string; toDate?: string; limit?: string },
+  ) {
+    return this.ratesService.getRateHistory(from, to, query);
+  }
+
+  // ==================== 路径查询 ====================
+
+  @Get(':from/:to/paths')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取可用转换路径' })
+  @ApiParam({ name: 'from', description: '源货币代码' })
+  @ApiParam({ name: 'to', description: '目标货币代码' })
+  @ApiQuery({ name: 'date', required: false, description: '日期' })
+  @ApiResponse({ status: 200, description: '返回可用路径' })
   @ApiUnauthorizedResponse({ description: '未授权访问' })
   async getAvailablePaths(
-    @Query('from') from: string,
-    @Query('to') to: string,
+    @Param('from') from: string,
+    @Param('to') to: string,
+    @Query() query: { date?: string },
   ) {
     if (!from || !to) {
       throw new NotFoundException('Both "from" and "to" currency codes are required');
     }
     
-    const paths = await this.ratesService.getAvailablePaths(from, to);
+    const paths = await this.ratesService.getAvailablePaths(from, to, query);
     
     return {
       from: from.toUpperCase(),
@@ -139,5 +129,69 @@ export class RatesController {
       paths,
       totalPaths: paths.length,
     };
+  }
+
+  // ==================== 手动汇率 ====================
+
+  @Post('manual')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '设置手动汇率' })
+  @ApiResponse({ status: 200, description: '设置成功' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async setManualRate(
+    @Body() body: { from: string; to: string; rate: number; date?: string }
+  ) {
+    return this.ratesService.setManualRate(body);
+  }
+
+  // ==================== Provider 管理 ====================
+
+  @Get('providers')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取 Providers 列表' })
+  @ApiResponse({ status: 200, description: '返回 Providers 列表' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async getProviders() {
+    return this.ratesService.getProviders();
+  }
+
+  @Post('providers/:id/test')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '测试 Provider 连接' })
+  @ApiParam({ name: 'id', description: 'Provider ID' })
+  @ApiResponse({ status: 200, description: '测试结果' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async testProvider(@Param('id') id: string) {
+    return this.ratesService.testProvider(id);
+  }
+
+  // ==================== 监控 API (新增) ====================
+
+  @Get('stats/current')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取当前监控统计' })
+  @ApiResponse({ status: 200, description: '返回当前小时的统计信息' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  getCurrentStats() {
+    return this.ratesService.getCurrentStats();
+  }
+
+  @Get('stats/history')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取历史监控统计' })
+  @ApiQuery({ name: 'from', required: false, description: '开始日期' })
+  @ApiQuery({ name: 'to', required: false, description: '结束日期' })
+  @ApiQuery({ name: 'limit', required: false, description: '返回数量限制' })
+  @ApiResponse({ status: 200, description: '返回历史统计' })
+  @ApiUnauthorizedResponse({ description: '未授权访问' })
+  async getStatsHistory(
+    @Query() query: { from?: string; to?: string; limit?: string },
+  ) {
+    return this.ratesService.getStatsHistory(query);
   }
 }

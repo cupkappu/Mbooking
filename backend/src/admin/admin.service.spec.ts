@@ -15,7 +15,7 @@ import { Provider } from '../rates/provider.entity';
 import { CurrenciesService } from '../currencies/currencies.service';
 import { CurrencyProviderService } from '../currencies/currency-provider.service';
 import { ProvidersService } from '../providers/providers.service';
-import { RateGraphEngine } from '../rates/rate-graph-engine';
+import { RateGraphEngine } from '../rates/services/rate-graph.engine';
 
 describe('AdminService', () => {
   let service: AdminService;

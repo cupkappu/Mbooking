@@ -14,7 +14,7 @@ import { JournalEntry } from '../journal/journal-entry.entity';
 import { JournalLine } from '../journal/journal-line.entity';
 import { Currency } from '../currencies/currency.entity';
 import { ExchangeRate } from '../rates/exchange-rate.entity';
-import { RateGraphEngine } from '../rates/rate-graph-engine';
+import { RateGraphEngine } from '../rates/services/rate-graph.engine';
 import { Budget } from '../budgets/budget.entity';
 import { Provider, ProviderType } from '../rates/provider.entity';
 import { CurrenciesService } from '../currencies/currencies.service';

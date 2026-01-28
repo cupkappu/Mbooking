@@ -4,7 +4,7 @@ import { Repository, LessThanOrEqual } from 'typeorm';
 import { Provider } from '../../rates/provider.entity';
 import { ExchangeRate } from '../../rates/exchange-rate.entity';
 import { AuditLog as AuditLogEntity } from '../entities/audit-log.entity';
-import { RateGraphEngine } from '../../rates/rate-graph-engine';
+import { RateGraphEngine } from '../../rates/services/rate-graph.engine';
 import { AuditEventPublisher } from '../events/audit-event-publisher.service';
 import { AuditLog } from '../decorators/audit-log.decorator';
 import { v4 as uuidv4 } from 'uuid';

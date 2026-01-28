@@ -3,6 +3,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 export enum ProviderType {
   JS_PLUGIN = 'js_plugin',
   REST_API = 'rest_api',
+  MANUAL = 'manual',
 }
 
 @Entity('providers')
@@ -16,6 +17,7 @@ export class Provider {
   @Column({
     type: 'enum',
     enum: ProviderType,
+    default: ProviderType.REST_API,
   })
   type: ProviderType;
 
@@ -24,7 +26,9 @@ export class Provider {
     file_path?: string;
     base_url?: string;
     api_key?: string;
+    timeout?: number;
     headers?: Record<string, string>;
+    plugin_path?: string;
   };
 
   @Column('text', { array: true })
@@ -38,6 +42,9 @@ export class Provider {
 
   @Column({ default: true })
   record_history: boolean;
+
+  @Column({ default: 1 })
+  priority: number;
 
   @Column({ default: true })
   is_active: boolean;

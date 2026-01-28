@@ -6,7 +6,7 @@ import { JournalLine } from './journal-line.entity';
 import { QueryService } from '../query/query.service';
 import { TenantContext } from '../common/context/tenant.context';
 import { CurrenciesService } from '../currencies/currencies.service';
-import { RateGraphEngine } from '../rates/rate-graph-engine';
+import { RateGraphEngine } from '../rates/services/rate-graph.engine';
 import { TenantsService } from '../tenants/tenants.service';
 import { BudgetProgressService } from '../budgets/services/budget-progress.service';
 

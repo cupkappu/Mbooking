@@ -4,7 +4,7 @@ import { Repository, Between, In, Like } from 'typeorm';
 import { Account, AccountType } from '../accounts/account.entity';
 import { JournalEntry } from '../journal/journal-entry.entity';
 import { JournalLine } from '../journal/journal-line.entity';
-import { RateGraphEngine } from '../rates/rate-graph-engine';
+import { RateGraphEngine } from '../rates/services/rate-graph.engine';
 import { TenantContext } from '../common/context/tenant.context';
 import { TenantsService } from '../tenants/tenants.service';
 
