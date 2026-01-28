@@ -126,16 +126,7 @@ describe('QueryService', () => {
       };
       journalLineRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
-      rateGraphEngine.getRate.mockResolvedValue({
-        from: 'USD',
-        to: 'EUR',
-        rate: 0.85,
-        timestamp: new Date(),
-        source: 'test',
-        path: ['USD', 'EUR'],
-        hops: 1,
-        isInferred: false,
-      });
+      rateGraphEngine.getRate.mockResolvedValue({ rate: 0.85 });
 
       const result = await runWithTenant('tenant-1', () =>
         service.getBalances({

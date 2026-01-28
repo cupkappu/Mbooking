@@ -26,6 +26,7 @@ describe('SchedulerManagementService', () => {
     supports_historical: false,
     supports_date_query: false,
     record_history: true,
+    priority: 1,
     created_at: new Date('2024-01-01'),
     updated_at: new Date('2024-01-01'),
   };
@@ -117,16 +118,7 @@ describe('SchedulerManagementService', () => {
   describe('triggerManualFetch', () => {
     it('should fetch rates and return result with duration', async () => {
       providerRepository.find.mockResolvedValue([mockProvider]);
-      rateGraphEngine.getRate.mockResolvedValue({
-        from: 'USD',
-        to: 'EUR',
-        rate: 1.5,
-        timestamp: new Date(),
-        source: 'test',
-        path: ['USD', 'EUR'],
-        hops: 1,
-        isInferred: false,
-      });
+      rateGraphEngine.getRate.mockResolvedValue({ rate: 0.92 });
 
       const result = await service.triggerManualFetch({}, 'admin-uuid', '127.0.0.1');
 
@@ -139,16 +131,7 @@ describe('SchedulerManagementService', () => {
     it('should use configured currencies when set', async () => {
       await service.updateSchedulerConfig({ currencies: ['USD', 'JPY'] }, 'admin-uuid');
       providerRepository.find.mockResolvedValue([mockProvider]);
-      rateGraphEngine.getRate.mockResolvedValue({
-        from: 'USD',
-        to: 'JPY',
-        rate: 150,
-        timestamp: new Date(),
-        source: 'test',
-        path: ['USD', 'JPY'],
-        hops: 1,
-        isInferred: false,
-      });
+      rateGraphEngine.getRate.mockResolvedValue({ rate: 150 });
 
       const result = await service.triggerManualFetch({}, 'admin-uuid');
 
@@ -168,16 +151,7 @@ describe('SchedulerManagementService', () => {
 
     it('should delete old exchange rates before fetching new ones', async () => {
       providerRepository.find.mockResolvedValue([mockProvider]);
-      rateGraphEngine.getRate.mockResolvedValue({
-        from: 'USD',
-        to: 'EUR',
-        rate: 1.5,
-        timestamp: new Date(),
-        source: 'test',
-        path: ['USD', 'EUR'],
-        hops: 1,
-        isInferred: false,
-      });
+      rateGraphEngine.getRate.mockResolvedValue({ rate: 1.5 });
 
       await service.triggerManualFetch({}, 'admin-uuid');
 
