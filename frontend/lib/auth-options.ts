@@ -81,6 +81,18 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Handle relative URLs
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      // Handle same-origin URLs
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      // Default to baseUrl for security
+      return baseUrl;
+    },
     async jwt({ token, user, trigger, session }) {
       // 首次登录
       if (user) {

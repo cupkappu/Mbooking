@@ -121,7 +121,7 @@
       </div>
 
       <button
-        onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+        onClick={() => signIn('google', { callbackUrl })}
         className="w-full py-2 px-4 border rounded-md hover:bg-accent"
       >
         Sign in with Google
