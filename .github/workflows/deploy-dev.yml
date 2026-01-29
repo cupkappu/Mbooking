@@ -101,6 +101,7 @@ jobs:
             BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker compose -f docker-compose.prod.yml down || true
 
             echo "=== Starting services ==="
+            NEXTAUTH_URL=${{ secret.DEV_NEXTAUTH_URL }} \
             BACKEND_TAG=\$BACKEND_TAG FRONTEND_TAG=\$FRONTEND_TAG docker compose -f docker-compose.prod.yml up -d
 
             echo "=== Waiting for services to be healthy ==="
